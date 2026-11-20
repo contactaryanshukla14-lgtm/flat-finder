@@ -1,4 +1,5 @@
 // Pure filter logic. A society is "match", "likely", "unknown" (not checked yet) or "no".
+import { societySearchText } from './search.js';
 
 export const RANK = { match: 4, likely: 3, probable: 2, unknown: 1, no: 0 };
 
@@ -119,7 +120,7 @@ const norm = (t) => (t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 export function matchSociety(s, c) {
   if (c.only && !c.only.includes(s.id)) return 'no';
   if (c.q) {
-    const hay = `${norm(s.name)} ${norm(s.developer)} ${norm(s.locality)}`;
+    const hay = societySearchText(s);
     if (!norm(c.q).split(' ').every((w) => hay.includes(w))) return 'no';
   }
   if (c.kinds.length && !c.kinds.includes(s.kind)) return 'no';
@@ -131,6 +132,7 @@ export function matchSociety(s, c) {
     const p = priceFor(s, c.mode, c.bhk);
     if (p && budget && p.value > budget) return 'no';
     if (p && floor && p.value < floor) return 'no';
+    if (!p && s.listing_source === null) return 'unknown';
   }
   for (const key of c.amenities) if (!hasAmenity(s, key)) return 'no';
 

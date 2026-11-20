@@ -1,4 +1,26 @@
-# Flat Finder
+# Mumbai Flat Finder
+
+This fork opens to Mumbai and keeps the original Flat Finder map, filters, research log and shortlist. Mumbai includes **5,803 residential and mixed-use MahaRERA registrations** across Mumbai City and Mumbai Suburban, from the 17 November 2026 snapshot. Separate wings may have their own registration.
+
+```sh
+cd web
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). Search using a project, developer, locality, postal PIN code or MahaRERA ID. Click a postal marker to filter to its PIN code. The Mumbai sample search shows projects with documented two-bedroom layouts and a gym. Gurugram remains available in the city selector.
+
+Most Mumbai map locations are approximate and represent post offices for the filed PIN codes. Some registrations have no usable map location and remain searchable. The registry contains project registrations. Live rent and sale listings, asking prices, verified bedroom dimensions and proximity information are unavailable in the Mumbai snapshot. Filters remain in the original interface and return matches when the necessary data is available. A small set of project records includes developer-sourced layouts and amenities.
+
+Mumbai data comes from [AskRera’s MahaRERA registry export](https://askrera.com/data/maharera-registered-projects/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), filtered to both Mumbai districts and joined to the [India Post PIN Code Directory](https://data.gov.in/resource/all-india-pincode-directory-till-last-month) ([CSV mirror](https://github.com/dropdevrahul/pincodes-india/blob/main/pincode.csv), Government Open Data License – India). To refresh the data:
+
+```sh
+python pipeline/mumbai_registry.py maharera-registered-projects.csv pincode.csv
+```
+
+The CLI uses the bundled Mumbai snapshot by default. Try `node cli/flatfinder.mjs --bhk 2 --amenity gym`. The fork retains the Cloudflare Pages MCP endpoint at `/mcp`.
+
+## Original Flat Finder
 
 Every housing society in a city on one night map. Set the smallest bedroom you can live with, size, BHK, amenities and budget, and watch the societies that fit light up. Every number links to where it came from.
 
@@ -69,7 +91,7 @@ cd ../web && npm install && npm run dev
 
 Tests: `cd pipeline && uv run --with pytest pytest` and `cd web && npx vitest run --root .. cli web/src`.
 
-Cities live in `data/cities.json`. Gurugram is built; Bengaluru and Mumbai are configured and need the pipeline run (see the skill, Job 2).
+Cities live in `data/cities.json`. Gurugram and Mumbai data are built. Bengaluru is configured and needs the pipeline run (see the skill, Job 2).
 
 Press `/` to search for a society. The Streets button switches to a street map with road and sector names.
 

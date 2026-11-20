@@ -1,5 +1,5 @@
 import './style.css';
-import maplibregl from 'maplibre-gl';
+import { LngLatBounds } from 'maplibre-gl';
 import { addBaseLayers, addSocietyLayers, BASE_MODES, createMap, OVERVIEW, setBaseMode, setHighlights, setSelected, setStates, startPulse } from './map.js';
 import { searchSocieties } from './search.js';
 import { createFeed } from './feed.js';
@@ -8,7 +8,7 @@ import { AMENITY_KEYS, DEFAULT_CRITERIA, NEAR, RANK, feetLabel, formatINR, match
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const mobile = matchMedia('(max-width: 700px)').matches;
-const REPO = 'https://github.com/kairothq/flat-finder';
+const REPO = 'https://github.com/contactaryanshukla14-lgtm/flat-finder';
 const params = new URLSearchParams(location.search);
 const store = { // localStorage can be missing or blocked: never let it break the page
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -24,23 +24,29 @@ const KINDS = [
 const AMEN_LABELS = { squash: 'Squash', pool: 'Pool', gym: 'Gym', club: 'Clubhouse', tennis: 'Tennis', badminton: 'Badminton', jogging: 'Jogging track', kids: 'Kids play' };
 const DIVY = { // Divy's own Gurugram search, shown as the example
   ...structuredClone(DEFAULT_CRITERIA), kinds: ['apartment'], bhk: [2, 3, 4], roomArea: 138, minSqft: 1620, amenities: ['squash'] }; // 11'3" x 12'3" = 138 sq ft
+const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), bhk: [2], amenities: ['gym'] };
+const DEFAULT_CITY = 'mumbai';
+const located = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng);
 const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', probable: 'Probably fits (estimated)', unknown: 'Not checked yet', no: 'Does not match' };
 
 let crit = structuredClone(DEFAULT_CRITERIA);
 let baseMode = BASE_MODES.includes(params.get('map')) ? params.get('map') : 'streets';
 let roomMode = 'off', areaUnit = 'gaj', sortBy = 'best';
-let data, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = 'gurgaon', details = null;
+let data, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
+const preset = () => cityId === 'mumbai' ? MUMBAI_SAMPLE : DIVY;
 let myList = [], allAmenities = [];
 const highlights = { glow: true, bounds: true, labels: true, ...store.get('ff-highlights', {}) };
 
 async function boot() {
-  const cities = await fetch('/data/cities.json').then((r) => r.json()).catch(() => ({ gurgaon: { name: 'Gurugram' } }));
-  cityId = cities[params.get('city')] ? params.get('city') : 'gurgaon';
+  const cities = await fetch('/data/cities.json').then((r) => r.json()).catch(() => ({ mumbai: { name: 'Mumbai' } }));
+  cityId = Object.hasOwn(cities, params.get('city')) ? params.get('city') : DEFAULT_CITY;
   const [city, shapes] = await Promise.all([
     fetch(`/data/${cityId}.json`).then((r) => r.json()),
     fetch(`/data/${cityId}-shapes.geojson`).then((r) => r.json()),
   ]);
   data = city;
+  document.title = cityId === 'mumbai' ? 'Mumbai Flat Finder' : 'Flat Finder';
+  if (cityId === 'mumbai') $('preset-divy').textContent = 'Load sample search';
   OVERVIEW.center = city.city.center;
   OVERVIEW.zoom = city.city.zoom || OVERVIEW.zoom;
   byId = new Map(city.societies.map((s) => [s.id, s]));
@@ -53,8 +59,14 @@ async function boot() {
 
   myList = params.get('list') ? params.get('list').split(',').filter((id) => byId.has(id)) : store.get(`ff-list-${cityId}`, []).filter((id) => byId.has(id));
   const c = city.counts, m = city.price_model || {}, rated = city.societies.filter((s) => s.rating).length;
-  $('note').textContent = `${c.on_map.toLocaleString()} societies · ${(c.for_sale || 0).toLocaleString()} homes for sale, ${(c.for_rent || 0).toLocaleString()} for rent on Magicbricks · ${c.verified} verified from brochures and HRERA plans`;
-  $('about-prices').innerHTML = `Prices and rents are medians of live Magicbricks listings. <b>⚠</b> marks a listing price our checks think is a typo (far from the same home nearby, or rent and price that cannot both be right): it is shown as listed but not used for filters. <b>~</b> marks our estimate: rent is about ${((m.city_yield || 0.025) * 100).toFixed(1)}% of the price per year here (measured on ${m.pairs || 0} society and BHK pairs, correlation ${m.log_price_rent_correlation ?? 'n/a'}). "Probably fits" uses a cautious bedroom size estimated from unit size (${city.room_model?.n || 0} verified unit types). Resident ratings exist for ${rated.toLocaleString()} societies.`;
+  if (city.dataset === 'maharera') {
+    $('note').textContent = `${c.listed.toLocaleString()} registered projects across Mumbai City and Mumbai Suburban · ${c.on_map.toLocaleString()} on the map`;
+    $('about-prices').innerHTML = `Housing and mixed-use registrations from the <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera MahaRERA export</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Most pins use approximate locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Live listings, prices and bedroom dimensions are unavailable. BHK, home size and amenities appear where sourced.`;
+    $('dl-all').querySelector('small').textContent = 'All registered projects, postal areas and sources';
+  } else {
+    $('note').textContent = `${c.on_map.toLocaleString()} societies · ${(c.for_sale || 0).toLocaleString()} homes for sale, ${(c.for_rent || 0).toLocaleString()} for rent on Magicbricks · ${c.verified} verified from brochures and HRERA plans`;
+    $('about-prices').innerHTML = `Prices and rents are medians of live Magicbricks listings. <b>⚠</b> marks a listing price our checks think is a typo (far from the same home nearby, or rent and price that cannot both be right): it is shown as listed but not used for filters. <b>~</b> marks our estimate: rent is about ${((m.city_yield || 0.025) * 100).toFixed(1)}% of the price per year here (measured on ${m.pairs || 0} society and BHK pairs, correlation ${m.log_price_rent_correlation ?? 'n/a'}). "Probably fits" uses a cautious bedroom size estimated from unit size (${city.room_model?.n || 0} verified unit types). Resident ratings exist for ${rated.toLocaleString()} societies.`;
+  }
   $('dl-all').href = `/data/${cityId}-societies.csv`;
   $('dl-units').href = `/data/${cityId}-units.csv`;
   $('dl-results').onclick = exportResults;
@@ -76,8 +88,9 @@ async function boot() {
     feed.ambient();
     return;
   }
-  const points = { type: 'FeatureCollection', features: city.societies.map((s) => ({
-    type: 'Feature', properties: { sid: s.id, name: s.name, show: 1 }, geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) };
+  const points = { type: 'FeatureCollection', features: city.societies.filter(located).map((s) => ({
+    type: 'Feature', properties: { sid: s.id, name: s.location_precision === 'postal' ? s.pincode : s.name, show: 1 },
+    geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) };
   map.once('style.load', () => {
     addSocietyLayers(map, shapes, points);
     addBaseLayers(map);
@@ -87,7 +100,13 @@ async function boot() {
     // any hand on the map stops a running tour
     for (const ev of ['dragstart', 'wheel', 'touchstart']) map.on(ev, (e) => { if (e.originalEvent) stopTour(); });
     for (const l of ['bld', 'site-fill', 'glow']) {
-      map.on('click', l, (e) => { stopTour(); openSociety(e.features[0].properties.sid); });
+      map.on('click', l, (e) => {
+        stopTour();
+        const s = byId.get(e.features.find((f) => states.get(f.properties.sid) !== 'no')?.properties.sid);
+        if (!s) return;
+        if (s.location_precision === 'postal') { $('q').value = s.pincode; setQuery(s.pincode); }
+        else openSociety(s.id);
+      });
       map.on('mouseenter', l, () => (map.getCanvas().style.cursor = 'pointer'));
       map.on('mouseleave', l, () => (map.getCanvas().style.cursor = ''));
     }
@@ -97,7 +116,7 @@ async function boot() {
 
 function intro() {
   closeCard();
-  if (params.get('preset') === 'divy') useCriteria(DIVY);
+  if (params.get('preset') === 'divy') useCriteria(preset());
   if (params.get('open')) {
     map.jumpTo(OVERVIEW);
     applyFilters();
@@ -238,7 +257,7 @@ function buildFilters() {
   $('amen-q').oninput = amenList;
   $('f-ready').onchange = () => { crit.ready = $('f-ready').checked; applyFilters(); };
   $('f-sort').onchange = () => { sortBy = $('f-sort').value; renderResults(); };
-  $('preset-divy').onclick = () => useCriteria(DIVY);
+  $('preset-divy').onclick = () => useCriteria(preset());
   $('btn-replay').onclick = intro;
   $('btn-tour').onclick = tour;
   $('btn-hide').onclick = () => document.body.classList.toggle('bare');
@@ -270,7 +289,7 @@ function applyFilters(wave = false) {
   renderResults();
   if (selected) renderCard(byId.get(selected));
 }
-const dist = (s, c) => (s.lng - c[0]) ** 2 + (s.lat - c[1]) ** 2;
+const dist = (s, c) => located(s) ? (s.lng - c[0]) ** 2 + (s.lat - c[1]) ** 2 : Infinity;
 
 function sorted(list) {
   const price = (s) => priceFor(s, crit.mode, crit.bhk)?.value ?? Infinity;
@@ -346,7 +365,7 @@ function openSociety(sid, { fly = true } = {}) {
   if (!s) return;
   if (map) setSelected(map, sid, selected);
   selected = sid;
-  if (fly && map) map.flyTo({ center: [s.lng, s.lat], zoom: mobile ? 15.4 : 16.2, pitch: is3d ? 55 : 0, bearing: 0, duration: 2600, essential: true,
+  if (fly && map && located(s)) map.flyTo({ center: [s.lng, s.lat], zoom: s.location_precision === 'postal' ? 14 : mobile ? 15.4 : 16.2, pitch: is3d ? 55 : 0, bearing: 0, duration: 2600, essential: true,
     offset: mobile ? [0, -80] : [-180, 0] });
   document.body.classList.add('has-card');
   if (mobile) showMobile('society');
@@ -377,7 +396,7 @@ function renderCard(s) {
       ? u.bedrooms.map((r) => `<span class="${bad(r) ? 'fail' : ''}">${feetLabel(r[0])} × ${feetLabel(r[1])}</span>`).join(', ') + (u.rooms_complete ? '' : ' <span class="fine">(not all rooms read)</span>')
         + (u.confidence === 'ocr' ? ` <span class="fine">(read from the plan by ${esc(u.checked_by || 'OCR')})</span>` : '')
       : u.est_short ? `<span class="fine">plans not read · estimated at least ${feetLabel(u.est_short)} wide, ~${u.est_area} sq ft</span>` : '<span class="fine">room sizes not read yet</span>';
-    const srcLabel = u.confidence === 'ai' || u.confidence === 'ocr' ? 'plan image' : u.confidence === 'primary' ? `plan${u.page ? ' p.' + esc(u.page) : ''}` : `portal${u.page ? ' p.' + esc(u.page) : ''}`;
+    const srcLabel = u.confidence === 'developer' ? 'developer' : u.confidence === 'ai' || u.confidence === 'ocr' ? 'plan image' : u.confidence === 'primary' ? `plan${u.page ? ' p.' + esc(u.page) : ''}` : `portal${u.page ? ' p.' + esc(u.page) : ''}`;
     const src = u.source ? `<a href="${esc(u.source)}" target="_blank" rel="noopener">${srcLabel}</a>` : '';
     const size = u.super_sqft ? `${u.super_sqft.toLocaleString()} super` : u.carpet_sqft ? `${u.carpet_sqft.toLocaleString()} carpet` : u.size_sqft ? `${u.size_sqft.toLocaleString()}` : '';
     const vl = { unknown: 'unread', probable: 'probably' }[v] || v;
@@ -395,7 +414,11 @@ function renderCard(s) {
   const plans = Object.entries(s.plan_links || {}).map(([b, urls]) => urls.slice(0, 2).map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${b} BHK plan${urls.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')).join(' ');
   const issue = `${REPO}/issues/new?title=${encodeURIComponent('Research: ' + s.name)}&body=${encodeURIComponent(`Please verify room sizes and amenities for ${s.name} (${s.locality || ''}).\n\nPortal page: ${s.url}\n${s.brochure_url ? 'Brochure: ' + s.brochure_url : ''}`)}`;
   const facts2 = [s.towers && `${s.towers} towers`, s.units && `${Number(s.units).toLocaleString()} units`, s.acres && `${s.acres} acres`, s.status, s.possession && `possession ${s.possession}`].filter(Boolean).join(' · ');
-  const counts = (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
+  const counts = s.listing_source === null ? 'Live listing data unavailable' : (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
+  const locationNote = s.location_precision === 'postal' ? `Approximate location · PIN ${esc(s.pincode)}`
+    : s.location_precision === 'unmapped' ? 'Project location unavailable'
+    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">Developer-reported map location</a>`
+    : s.shape === 'osm' ? 'Buildings from OpenStreetMap' : s.shape === 'osm-site' ? 'Boundary from OpenStreetMap, towers drawn approximately' : 'Approximate shape: towers drawn from the listed tower count';
   const parts = s.score_parts || {};
   const score = s.score != null ? `<div class="score"><div class="big">${s.score}<small>/10</small></div><div class="parts">
       ${parts.residents != null ? `<span>Residents <b>${parts.residents}</b></span>` : '<span class="fine">No resident ratings yet</span>'}<span>Nearby <b>${parts.nearby}</b></span><span>Amenities <b>${parts.amenities}</b></span>
@@ -432,13 +455,14 @@ function renderCard(s) {
     ${about}
     <div class="links">
       <a class="btnlink" href="${esc(s.gmaps)}" target="_blank" rel="noopener">Google Maps and reviews</a>
-      <a class="btnlink" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank" rel="noopener">Directions</a>
-      <a href="${esc(s.url)}" target="_blank" rel="noopener">Magicbricks page</a>
+      ${located(s) && s.location_precision !== 'postal' ? `<a class="btnlink" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank" rel="noopener">Directions</a>` : ''}
+      <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url_label || 'Magicbricks page')}</a>
+      ${s.developer_url ? `<a href="${esc(s.developer_url)}" target="_blank" rel="noopener">Developer page</a>` : ''}
       ${s.brochure_url ? `<a href="${esc(s.brochure_url)}" target="_blank" rel="noopener">Brochure</a>` : ''}
       ${plans}
       ${!s.verified ? `<a href="${esc(issue)}" target="_blank" rel="noopener">Request a room check →</a>` : ''}
     </div>
-    <div class="fine">${s.rera_id ? 'RERA ' + esc(s.rera_id) + ' · ' : ''}${s.shape === 'osm' ? 'Buildings from OpenStreetMap' : s.shape === 'osm-site' ? 'Boundary from OpenStreetMap, towers drawn approximately' : 'Approximate shape: towers drawn from the listed tower count'}</div>`;
+    <div class="fine">${s.rera_id ? 'RERA ' + esc(s.rera_id) + ' · ' : ''}${locationNote}</div>`;
   $('card').hidden = false;
   $('c-close').onclick = () => { stopTour(); closeCard(); };
   $('c-star').onclick = () => { toggle(myList, s.id); saveList(); renderCard(s); renderResults(); };
@@ -516,9 +540,9 @@ function buildList() {
     redrawFilters();
     applyFilters();
     $('paste-result').innerHTML = `${found.length ? `<b>Added ${found.length}:</b> ${found.map(esc).join(' · ')}` : ''}${missed.length ? `<br><b>Not found:</b> ${missed.map(esc).join(', ')}` : ''}`;
-    if (map && myList.length) {
-      const pts = myList.map((id) => byId.get(id));
-      const b = pts.reduce((bb, s) => bb.extend([s.lng, s.lat]), new maplibregl.LngLatBounds([pts[0].lng, pts[0].lat], [pts[0].lng, pts[0].lat]));
+    const pts = myList.map((id) => byId.get(id)).filter(located);
+    if (map && pts.length) {
+      const b = pts.reduce((bb, s) => bb.extend([s.lng, s.lat]), new LngLatBounds([pts[0].lng, pts[0].lat], [pts[0].lng, pts[0].lat]));
       map.fitBounds(b, { padding: { top: 80, bottom: 80, left: mobile ? 40 : 380, right: mobile ? 40 : 460 }, maxZoom: 15, bearing: 0 });
     }
   };
@@ -600,11 +624,16 @@ function buildControls() {
 // ---------- onboarding ----------
 function buildOnboarding() {
   const c = data.counts;
+  const registry = data.dataset === 'maharera';
   const steps = [
-    ['Every society in ' + data.city.name + ', on one map', `${c.on_map.toLocaleString()} housing societies, ${(c.for_sale || 0).toLocaleString()} homes for sale and ${(c.for_rent || 0).toLocaleString()} for rent. Each one has its prices, rents, resident ratings, what is nearby, and links to Google Maps.`],
-    ['Start with what you cannot live without', 'Pick Buy or Rent and your budget. Then set the smallest bedroom you can live with, by both sides or by area in gaj or sq ft. Add amenities and what you want nearby, like a park within 500 m.'],
+    registry
+      ? ['Mumbai’s registered housing projects', `${c.listed.toLocaleString()} registrations across Mumbai City and Mumbai Suburban. Most map markers show the project’s postal area.`]
+      : ['Every society in ' + data.city.name + ', on one map', `${c.on_map.toLocaleString()} housing societies, ${(c.for_sale || 0).toLocaleString()} homes for sale and ${(c.for_rent || 0).toLocaleString()} for rent. Each one has its prices, rents, resident ratings, what is nearby, and links to Google Maps.`],
+    ['Start with what you cannot live without', registry ? 'Search by locality, PIN code, developer, project name or MahaRERA ID. Try the sample to see projects with documented BHK and amenities.'
+      : 'Pick Buy or Rent and your budget. Then set the smallest bedroom you can live with, by both sides or by area in gaj or sq ft. Add amenities and what you want nearby, like a park within 500 m.'],
     ['How to read the map', '<span class="lg match"></span> Verified: every bedroom read from builder plans and passes.<br><span class="lg likely"></span> Likely: the rooms read so far pass.<br><span class="lg probable"></span> Probably fits: plans not read yet, estimated from unit size.<br><span class="lg unknown"></span> Not checked yet: no room data, so neither pass nor fail.'],
-    ['Open a society, keep a list', 'Click any building for prices, bedrooms, ratings and the research behind every number. Star the ones you like, or paste a list of names you already have. Export your results as a CSV any time.'],
+    ['Open a society, keep a list', registry ? 'Click a postal marker to see its projects. Open a project to see its MahaRERA record. Star projects you like or export your results as a CSV.'
+      : 'Click any building for prices, bedrooms, ratings and the research behind every number. Star the ones you like, or paste a list of names you already have. Export your results as a CSV any time.'],
   ];
   let i = 0;
   const show = () => {
@@ -612,7 +641,7 @@ function buildOnboarding() {
     $('ob-body').innerHTML = `<h3>${steps[i][0]}</h3><p>${steps[i][1]}</p>${i === 1 ? '<button class="preset" id="ob-divy">Try an example search</button>' : ''}`;
     $('ob-back').hidden = i === 0;
     $('ob-next').textContent = i === steps.length - 1 ? 'Start exploring' : 'Next';
-    $('ob-divy')?.addEventListener('click', () => { useCriteria(DIVY); done(); });
+    $('ob-divy')?.addEventListener('click', () => { useCriteria(preset()); done(); });
   };
   const done = () => { $('onboard').hidden = true; store.set('ff-onboarded', true); };
   $('ob-next').onclick = () => (i === steps.length - 1 ? done() : (i++, show()));
@@ -681,9 +710,9 @@ function setQuery(q) {
   $('q-pill').querySelector('button')?.addEventListener('click', () => { $('q').value = ''; setQuery(''); });
   applyFilters();
   if (q && map) {
-    const hits = data.societies.filter((s) => states.get(s.id) !== 'no');
+    const hits = data.societies.filter((s) => located(s) && states.get(s.id) !== 'no');
     if (hits.length) {
-      const b = hits.reduce((bb, s) => bb.extend([s.lng, s.lat]), new maplibregl.LngLatBounds([hits[0].lng, hits[0].lat], [hits[0].lng, hits[0].lat]));
+      const b = hits.reduce((bb, s) => bb.extend([s.lng, s.lat]), new LngLatBounds([hits[0].lng, hits[0].lat], [hits[0].lng, hits[0].lat]));
       map.fitBounds(b, { padding: { top: 80, bottom: 80, left: mobile ? 40 : 380, right: mobile ? 40 : 460 }, maxZoom: 15, bearing: 0 });
     }
   }

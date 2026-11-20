@@ -464,14 +464,16 @@ def main(city="gurgaon"):
     print(doc["counts"], Counter(s["shape"] for s in societies), Counter(s["kind"] for s in societies), "features", len(shapes))
 
 
-def write_csv(soc_path, unit_path, societies):
+def write_csv(soc_path, unit_path, societies, source_column="magicbricks_url"):
     """Flat exports: one row per society, and one row per unit type with bedroom sizes."""
     cols = ["id", "name", "developer", "locality", "type", "lat", "lng", "status", "possession", "rera_id", "towers", "units", "acres",
             "listings_for_sale", "listings_for_rent", "price_range_min", "price_range_max", "price_per_sqft"]
     for b in range(1, 6):
         cols += [f"buy_{b}bhk_median", f"buy_{b}bhk_estimate", f"rent_{b}bhk_median", f"rent_{b}bhk_estimate", f"{b}bhk_price_flag"]
-    cols += ["rating", "rating_count", "review_count", "amenities", "verified", "smallest_bedroom_ft", "magicbricks_url", "google_maps_url"]
-    with open(soc_path, "w", newline="") as f:
+    cols += ["rating", "rating_count", "review_count", "amenities", "verified", "smallest_bedroom_ft", source_column, "google_maps_url"]
+    if source_column != "magicbricks_url":
+        cols += ["district", "pincode", "location_precision", "location_source"]
+    with open(soc_path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(cols)
         for s in societies:
@@ -486,8 +488,10 @@ def write_csv(soc_path, unit_path, societies):
                         "; ".join(f"{k}: {v}" for k, v in (p.get("flags") or {}).items()) or None]
             row += [s["rating"], s["rating_count"], s["review_count"], "; ".join(s["amenities"]), s["verified"],
                     f"{smallest[0]:.2f} x {smallest[1]:.2f}" if smallest else None, s["url"], s["gmaps"]]
+            if source_column != "magicbricks_url":
+                row += [s.get(k) for k in ("district", "pincode", "location_precision", "location_source")]
             w.writerow(row)
-    with open(unit_path, "w", newline="") as f:
+    with open(unit_path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(["society_id", "society", "unit", "bhk", "super_sqft", "carpet_sqft", "listed_sqft", "bedrooms_ft", "all_bedrooms_read",
                     "ai_narrowest_bedroom_ft", "ai_every_bedroom_long_side_at_least_ft", "ai_every_bedroom_area_at_least_sqft", "confidence", "source", "page"])

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseArgs, parseFeet, parsePrice, search } from './flatfinder.mjs';
+import { parseArgs, parseFeet, parsePrice, search } from './flatfinder-lib.mjs';
 
 it('reads feet and prices', () => {
   expect(parseFeet("11'3")).toBe(11.25);

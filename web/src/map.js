@@ -1,4 +1,5 @@
-import maplibregl from 'maplibre-gl';
+import { Map, ScaleControl, setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const COLORS = { match: '#ffd9a0', likely: '#c99a5c', probable: '#9a8463', unknown: '#55545c', no: '#1b1b1e' };
@@ -9,11 +10,12 @@ const stateColor = (fallback) => ['case',
   ['match', ['feature-state', 'st'], 'match', COLORS.match, 'likely', COLORS.likely, 'probable', COLORS.probable, 'unknown', COLORS.unknown, 'no', COLORS.no, fallback]];
 
 export function createMap(container, { mobile }) {
-  const map = new maplibregl.Map({
+  setWorkerUrl(new URL(workerUrl, location.href).href);
+  const map = new Map({
     container,
     attributionControl: { compact: true },
     center: mobile ? OVERVIEW.center : [78.5, 22.5],
-    zoom: mobile ? 11.6 : 2.2,
+    zoom: mobile ? OVERVIEW.zoom : 2.2,
     pitch: mobile ? 45 : 0,
     bearing: 0,
     maxPitch: 70,
@@ -45,7 +47,7 @@ export function createMap(container, { mobile }) {
   });
   map.touchZoomRotate.disableRotation();
   map.keyboard.disableRotation();
-  map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 90 }), 'bottom-right');
+  map.addControl(new ScaleControl({ unit: 'metric', maxWidth: 90 }), 'bottom-right');
   return map;
 }
 

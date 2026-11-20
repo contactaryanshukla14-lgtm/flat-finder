@@ -1,0 +1,12 @@
+society_id,society,unit,bhk,super_sqft,carpet_sqft,listed_sqft,bedrooms_ft,all_bedrooms_read,ai_narrowest_bedroom_ft,ai_every_bedroom_long_side_at_least_ft,ai_every_bedroom_area_at_least_sqft,confidence,source,page
+P51800016063,MARATHON EMINENCE,1 BHK,1,,,445,,False,,,,developer,https://marathon.in/eminence/,
+P51800016063,MARATHON EMINENCE,2 BHK,2,,,569,,False,,,,developer,https://marathon.in/eminence/,
+P51900051735,Piramal Aranya - Ahan 2,2 BHK,2,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900051735,Piramal Aranya - Ahan 2,3 BHK,3,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900051735,Piramal Aranya - Ahan 2,4 BHK,4,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900018039,Piramal Aranya - Wing B,2 BHK,2,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900018039,Piramal Aranya - Wing B,3 BHK,3,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900018039,Piramal Aranya - Wing B,4 BHK,4,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900018039,Piramal Aranya - Wing B,5 BHK,5,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900020330,Piramal Aranya - Wing C,2 BHK,2,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
+P51900020330,Piramal Aranya - Wing C,3 BHK,3,,,,,False,,,,developer,https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla,
