@@ -186,6 +186,8 @@ def build(registry, pincodes, output=WEB, osm=None):
         'dataset': 'maharera', 'as_of': as_of,
         'counts': {'listed': len(projects), 'on_map': on_map, 'not_located': len(projects) - on_map,
                    'project_pins': sum(p['location_precision'] == 'project' for p in projects),
+                   'project_buildings': sum(f['properties']['role'] == 'bld' for f in shapes),
+                   'context_buildings': sum(f['properties']['role'] == 'context' for f in shapes),
                    'verified': sum(p['verified'] for p in projects)},
         'sources': sources,
         'societies': projects,

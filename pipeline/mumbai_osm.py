@@ -9,6 +9,8 @@ from osm_fetch import height_of, poi_kind
 
 OSM_SOURCE = 'https://www.openstreetmap.org/copyright'
 RESIDENTIAL = {'apartments', 'residential', 'house', 'detached', 'bungalow', 'yes'}
+HOUSE_TYPES = {'house', 'detached', 'bungalow'}
+CONTEXT_LIMIT = 3000
 
 
 def normalized_name(value):
@@ -18,7 +20,7 @@ def normalized_name(value):
 
 
 def explicit_names(tags):
-    for key in ('name:en', 'name', 'official_name', 'alt_name'):
+    for key in ('name:en', 'name', 'official_name', 'alt_name', 'addr:housename'):
         for name in tags.get(key, '').split(';'):
             normalized = normalized_name(name)
             if len(normalized) >= 7:
@@ -35,17 +37,21 @@ def read_osm(path, bbox, wanted):
     from shapely.wkb import loads
 
     south, west, north, east = bbox
-    candidates, pois = defaultdict(list), []
+    candidates, pois, context = defaultdict(list), [], []
     wkb = osmium.geom.WKBFactory()
     processor = osmium.FileProcessor(path).with_locations().with_areas()
     for obj in processor:
         tags = obj.tags
         kind = poi_kind(tags)
+        building = tags.get('building')
+        height = height_of(tags) if obj.is_area() and building in RESIDENTIAL else None
+        if height is not None and not 0 < height < 450:
+            height = None
         names = sorted(wanted.intersection(explicit_names(tags))) if candidate_is_residential(tags) else []
-        if not kind and not names:
+        context_building = obj.is_area() and (building in ('apartments', 'residential') or (height or 0) >= 12)
+        if not kind and not names and not context_building:
             continue
         outline = None
-        height = None
         if obj.is_node() and obj.location.valid():
             lng, lat = obj.location.lon, obj.location.lat
             osm_type, identifier = 'node', obj.id
@@ -60,8 +66,6 @@ def read_osm(path, bbox, wanted):
                 continue
             osm_type = 'way' if obj.from_way() else 'relation'
             identifier = obj.orig_id()
-            if tags.get('building'):
-                height = height_of(tags)
         else:
             continue
         if not (south <= lat <= north and west <= lng <= east):
@@ -71,13 +75,16 @@ def read_osm(path, bbox, wanted):
         if kind:
             pois.append({'coords': coords, 'kind': kind, 'name': tags.get('name:en') or tags.get('name'),
                          'source': source})
-        if names:
+        if names or context_building:
             candidate = {'coords': coords, 'pin': tags.get('addr:postcode', '').strip(), 'source': source,
                          'outline': mapping(outline.simplify(0.000005, preserve_topology=True)) if outline else None,
-                         'height': height}
+                         'building': building in RESIDENTIAL, 'height': height,
+                         'estimated_height': 6 if building in HOUSE_TYPES else 14}
             for name in names:
                 candidates[name].append(candidate)
-    return candidates, pois
+            if context_building:
+                context.append(candidate)
+    return candidates, pois, context
 
 
 def unique_matches(projects, candidates):
@@ -113,10 +120,11 @@ def nearest_places(project, grid):
 
 def enrich(projects, path, bbox):
     wanted = {normalized_name(project['name']) for project in projects}
-    candidates, pois = read_osm(path, bbox, wanted)
+    candidates, pois, context = read_osm(path, bbox, wanted)
     if not candidates or not pois:
         raise ValueError('The map extract must contain named Mumbai projects and nearby places.')
     shapes = []
+    used_buildings = set()
     for project, match in unique_matches(projects, candidates):
         project['lng'], project['lat'] = match['coords']
         project['location_precision'] = 'project'
@@ -125,9 +133,29 @@ def enrich(projects, path, bbox):
             project['shape'] = 'osm'
             props = {'sid': project['id'], 'role': 'site'}
             shapes.append({'type': 'Feature', 'properties': props, 'geometry': match['outline']})
-            if match['height'] and 0 < match['height'] < 450:
-                props = {**props, 'role': 'bld', 'h': match['height']}
+            if match['building']:
+                used_buildings.add(match['source'])
+                project['display_height_estimated'] = match['height'] is None
+                props = {**props, 'role': 'bld', 'h': match['height'] or match['estimated_height']}
                 shapes.append({'type': 'Feature', 'properties': props, 'geometry': match['outline']})
+
+    # Retain a bounded number of genuine footprints for city context before vector tiles show buildings.
+    context.sort(key=lambda b: (b['height'] is None, -(b['height'] or 0), b['source']))
+    cells = defaultdict(int)
+    shown = 0
+    for building in context:
+        if building['source'] in used_buildings:
+            continue
+        cell = tuple(int(coord * 100) for coord in building['coords'])
+        if cells[cell] >= 28:
+            continue
+        cells[cell] += 1
+        shapes.append({'type': 'Feature', 'properties': {
+            'sid': building['source'], 'role': 'context', 'h': building['height'] or building['estimated_height'],
+        }, 'geometry': building['outline']})
+        shown += 1
+        if shown >= CONTEXT_LIMIT:
+            break
 
     grid = Grid(pois, lambda p: p['coords'])
     for project in projects:

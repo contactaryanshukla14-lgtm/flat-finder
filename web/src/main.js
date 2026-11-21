@@ -1,5 +1,5 @@
 import './style.css';
-import { LngLatBounds } from 'maplibre-gl';
+import { LngLatBounds, Marker } from 'maplibre-gl';
 import { addBaseLayers, addPostalLayers, addSocietyLayers, BASE_MODES, createMap, OVERVIEW, setBaseMode, setHighlights, setPostalCounts, setSelected, setStates, startPulse } from './map.js';
 import { searchSocieties } from './search.js';
 import { createFeed } from './feed.js';
@@ -8,6 +8,7 @@ import { AMENITY_KEYS, DEFAULT_CRITERIA, NEAR, RANK, feetLabel, formatINR, match
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const mobile = matchMedia('(max-width: 700px)').matches;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const REPO = 'https://github.com/contactaryanshukla14-lgtm/flat-finder';
 const params = new URLSearchParams(location.search);
 const pageUrl = new URL(import.meta.env.BASE_URL, location.href);
@@ -28,9 +29,16 @@ const AMEN_LABELS = { squash: 'Squash', pool: 'Pool', gym: 'Gym', club: 'Clubhou
 const DIVY = { // Divy's own Gurugram search, shown as the example
   ...structuredClone(DEFAULT_CRITERIA), kinds: ['apartment'], bhk: [2, 3, 4], roomArea: 138, minSqft: 1620, amenities: ['squash'] }; // 11'3" x 12'3" = 138 sq ft
 const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), bhk: [2], roomArea: 90 };
+const MUMBAI_FLY_IN = { center: [72.8308, 19.0037], zoom: 14.9, pitch: 59, bearing: 0 }; // Lower Parel
 const DEFAULT_CITY = 'mumbai';
 const located = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng);
 const projectPoint = (s) => located(s) && s.location_precision !== 'postal';
+const projectBuilding = (s) => typeof s.display_height_estimated === 'boolean';
+const marketUrl = (mode, bhk) => {
+  const rooms = bhk.length === 1 && bhk[0] >= 1 && bhk[0] <= 4 ? `${bhk[0]}-bhk-` : '';
+  const path = mode === 'rent' ? 'flats-for-rent-in-mumbai-pppfr' : 'flats-in-mumbai-for-sale-pppfs';
+  return `https://www.magicbricks.com/${rooms}${path}`;
+};
 const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', probable: 'Probably fits (estimated)', unknown: 'Not checked yet', no: 'Does not match' };
 
 let crit = structuredClone(DEFAULT_CRITERIA);
@@ -51,6 +59,7 @@ async function boot() {
   ]);
   data = city;
   document.title = cityId === 'mumbai' ? 'Mumbai Flat Finder' : 'Flat Finder';
+  document.body.dataset.city = cityId;
   if (cityId === 'mumbai') $('preset-divy').textContent = 'Load sample search';
   OVERVIEW.center = city.city.center;
   OVERVIEW.zoom = city.city.zoom || OVERVIEW.zoom;
@@ -65,9 +74,11 @@ async function boot() {
   myList = params.get('list') ? params.get('list').split(',').filter((id) => byId.has(id)) : store.get(`ff-list-${cityId}`, []).filter((id) => byId.has(id));
   const c = city.counts, m = city.price_model || {}, rated = city.societies.filter((s) => s.rating).length;
   if (city.dataset === 'maharera') {
-    $('note').textContent = `${c.listed.toLocaleString()} Mumbai projects · ${(c.project_pins || 0).toLocaleString()} mapped individually · Circles group PIN codes`;
-    $('about-prices').innerHTML = `Registered projects from <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Circles are approximate postal locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Named locations, footprints and nearby places include data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors (ODbL)</a>. Mumbai has no live sale or rent feed.`;
-    $('budget-coverage').hidden = false;
+    $('note').textContent = `${c.listed.toLocaleString()} registrations · ${c.project_buildings.toLocaleString()} 3D project buildings · Circles group PIN codes`;
+    $('about-prices').innerHTML = `Registered projects from <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Circles are approximate postal locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Named locations, footprints and nearby places include data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors (ODbL)</a>. Building heights are estimated where they are missing in OpenStreetMap.`;
+    $('budget-filter').hidden = true;
+    $('market-listings').hidden = false;
+    for (const option of $('f-sort').options) if (['price', 'listings'].includes(option.value)) option.hidden = true;
     $('dl-all').querySelector('small').textContent = 'All registered projects, postal areas and sources';
   } else {
     $('note').textContent = `${c.on_map.toLocaleString()} societies · ${(c.for_sale || 0).toLocaleString()} homes for sale, ${(c.for_rent || 0).toLocaleString()} for rent on Magicbricks · ${c.verified} verified from brochures and HRERA plans`;
@@ -84,7 +95,7 @@ async function boot() {
   buildControls();
   buildOnboarding();
   buildMobile();
-  hintTilt();
+  if (!reducedMotion && cityId !== 'mumbai') hintTilt();
   try {
     map = createMap('map', { mobile });
     window.__map = map; // handy for debugging in the console
@@ -103,12 +114,12 @@ async function boot() {
     type: 'Feature', properties: { sid: s.id, name: s.name, show: 1 },
     geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) };
   map.once('style.load', () => {
-    addSocietyLayers(map, shapes, points);
+    addSocietyLayers(map, shapes, points, { citywide: cityId === 'mumbai' });
     addBaseLayers(map);
     if (postalGroups.size) addPostalLayers(map);
     setBaseMode(map, baseMode);
     setHighlights(map, highlights);
-    startPulse(map);
+    if (!reducedMotion) startPulse(map);
     // any hand on the map stops a running tour
     for (const ev of ['dragstart', 'wheel', 'touchstart']) map.on(ev, (e) => { if (e.originalEvent) stopTour(); });
     for (const l of ['bld', 'site-fill', 'glow']) {
@@ -138,7 +149,6 @@ async function boot() {
 }
 
 function intro() {
-  closeCard();
   if (params.get('preset') === 'divy') useCriteria(preset());
   if (params.get('open')) {
     map.jumpTo(OVERVIEW);
@@ -146,20 +156,42 @@ function intro() {
     setTimeout(() => openSociety(params.get('open')), 300);
     return;
   }
-  if (mobile || params.has('nointro')) {
-    if (!mobile) map.jumpTo(OVERVIEW);
-    applyFilters(true);
+  if (((mobile || reducedMotion) && cityId !== 'mumbai') || params.has('nointro')) {
+    map.jumpTo(OVERVIEW);
+    applyFilters(!reducedMotion);
     feed.ambient();
     return;
   }
+  playIntro();
+}
+
+function finishIntro() {
+  applyFilters(true);
+  feed.ambient();
+}
+
+function playIntro() {
+  if (!map?.getSource('pts')) return;
+  map.off('moveend', finishIntro);
+  stopTour();
+  closeCard();
+  map.stop();
+  const overview = { ...OVERVIEW, pitch: is3d ? OVERVIEW.pitch : 0 };
+  const camera = cityId === 'mumbai' && is3d && !params.has('preset') ? MUMBAI_FLY_IN : overview;
+  const offset = camera === MUMBAI_FLY_IN && mobile ? [0, -100] : [0, 0];
+  if (reducedMotion) {
+    map.easeTo({ ...camera, offset, duration: 0 });
+    applyFilters();
+    return;
+  }
+  clearWave();
   setStates(map, data.societies.filter(projectPoint).map((s) => [s.id, 'no']));
   if (postalGroups.size) setPostalCounts(map, postalGroups, new Map());
   map.jumpTo({ center: [78.5, 22.5], zoom: 2.2, pitch: 0, bearing: 0 });
-  setTimeout(() => {
-    map.flyTo({ ...OVERVIEW, duration: 4250, curve: 1.6, essential: true });
-    feed.sweep(data.societies, 4500);
-  }, 250);
-  map.once('moveend', () => applyFilters(true));
+  const duration = mobile ? 2800 : 4200;
+  map.once('moveend', finishIntro);
+  map.flyTo({ ...camera, offset, duration, curve: 1.6 });
+  feed.sweep(data.societies.filter(projectPoint), duration);
 }
 
 // ---------- filters ----------
@@ -269,6 +301,10 @@ function buildFilters() {
     const rent = crit.mode === 'rent';
     $('v-price').textContent = range(rent ? crit.minRent : crit.minPrice, rent ? crit.maxRent : crit.maxPrice, (v) => formatINR(v) + (rent ? '/mo' : ''));
     $('l-price').textContent = rent ? 'Monthly rent' : 'Budget';
+    if (data.dataset === 'maharera') {
+      $('market-link').href = marketUrl(crit.mode, crit.bhk);
+      $('market-link').textContent = rent ? 'Browse Mumbai rentals on Magicbricks ↗' : 'Browse Mumbai flats for sale on Magicbricks ↗';
+    }
     const g = +$('f-area-range').value;
     $('v-area').textContent = areaUnit === 'gaj' ? `at least ${g.toFixed(2).replace(/\.?0+$/, '')} gaj (${Math.round(g * 9)} sq ft)` : `at least ${Math.round(g * 9)} sq ft (${g.toFixed(1)} gaj)`;
     $('room-hint').textContent = 'Every bedroom must be at least this big (length × width).';
@@ -282,7 +318,7 @@ function buildFilters() {
   $('f-ready').onchange = () => { crit.ready = $('f-ready').checked; applyFilters(); };
   $('f-sort').onchange = () => { sortBy = $('f-sort').value; renderResults(); };
   $('preset-divy').onclick = () => useCriteria(preset());
-  $('btn-replay').onclick = intro;
+  $('btn-replay').onclick = playIntro;
   $('btn-tour').onclick = tour;
   $('btn-hide').onclick = () => document.body.classList.toggle('bare');
   $('btn-log').onclick = () => toggleLog();
@@ -298,17 +334,22 @@ function toggleLog(show = document.body.classList.contains('nolog')) {
 
 // ---------- apply and results ----------
 let waveTimer = null;
+function clearWave() {
+  clearInterval(waveTimer);
+  waveTimer = null;
+}
+
 function applyFilters(wave = false) {
   const next = new Map(data.societies.map((s) => [s.id, matchSociety(s, crit)]));
-  const changed = [...next].filter(([id, st]) => projectPoint(byId.get(id)) && (wave || states.get(id) !== st));
+  const changed = [...next].filter(([id, st]) => projectPoint(byId.get(id)) && (wave || waveTimer || states.get(id) !== st));
   states = next;
-  clearInterval(waveTimer);
-  if (wave && map) {
+  clearWave();
+  if (wave && map && changed.length) {
     const c = OVERVIEW.center;
     changed.sort((a, b) => dist(byId.get(a[0]), c) - dist(byId.get(b[0]), c));
     let i = 0;
     const per = Math.ceil(changed.length / 30);
-    waveTimer = setInterval(() => { setStates(map, changed.slice(i, i + per)); i += per; if (i >= changed.length) clearInterval(waveTimer); }, 50);
+    waveTimer = setInterval(() => { setStates(map, changed.slice(i, i + per)); i += per; if (i >= changed.length) clearWave(); }, 44);
   } else if (map?.getSource?.('shapes')) setStates(map, changed);
   if (map?.getSource?.('postal')) setPostalCounts(map, postalGroups, states);
   renderResults();
@@ -396,7 +437,7 @@ function openSociety(sid, { fly = true } = {}) {
   if (!s) return;
   if (map) setSelected(map, sid, selected);
   selected = sid;
-  if (fly && map && located(s)) map.flyTo({ center: [s.lng, s.lat], zoom: s.location_precision === 'postal' ? 14 : mobile ? 15.4 : 16.2, pitch: is3d ? 55 : 0, bearing: 0, duration: 2600, essential: true,
+  if (fly && map && located(s)) map.flyTo({ center: [s.lng, s.lat], zoom: s.location_precision === 'postal' ? 14 : mobile ? 15.4 : 16.2, pitch: is3d ? 55 : 0, bearing: 0, duration: reducedMotion ? 0 : 2100,
     offset: mobile ? [0, -80] : [-180, 0] });
   document.body.classList.add('has-card');
   if (mobile) showMobile('society');
@@ -446,7 +487,7 @@ function renderCard(s) {
   const plans = Object.entries(s.plan_links || {}).map(([b, urls]) => urls.slice(0, 2).map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${b} BHK plan${urls.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')).join(' ');
   const issue = `${REPO}/issues/new?title=${encodeURIComponent('Research: ' + s.name)}&body=${encodeURIComponent(`Please verify room sizes and amenities for ${s.name} (${s.locality || ''}).\n\nPortal page: ${s.url}\n${s.brochure_url ? 'Brochure: ' + s.brochure_url : ''}`)}`;
   const facts2 = [s.towers && `${s.towers} towers`, s.units && `${Number(s.units).toLocaleString()} units`, s.acres && `${s.acres} acres`, s.status, s.possession && `possession ${s.possession}`].filter(Boolean).join(' · ');
-  const counts = s.listing_source === null ? 'Live listing data unavailable' : (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
+  const counts = (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
   const locationNote = s.location_precision === 'postal' ? `Approximate location · PIN ${esc(s.pincode)}`
     : s.location_precision === 'unmapped' ? 'Project location unavailable'
     : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap name match' : 'Developer-reported map location'}</a>`
@@ -474,10 +515,12 @@ function renderCard(s) {
     <div class="meta">${esc(s.developer || '')}${s.locality ? ' · ' + esc(s.locality) : ''} · ${esc(s.config_text || s.kind)}${s.kind_inferred ? ' <span class="fine">(type inferred from name)</span>' : ''}</div>
     <div class="meta">${esc(facts2)}</div>
     ${score}
-    <div class="meta">${s.rating ? `<span class="stars">★ ${s.rating.toFixed(1)}</span> ${s.rating_count || 0} resident ratings · ${s.review_count || 0} reviews · ` : ''}${counts}</div>
+    ${s.listing_source === null ? '' : `<div class="meta">${s.rating ? `<span class="stars">★ ${s.rating.toFixed(1)}</span> ${s.rating_count || 0} resident ratings · ${s.review_count || 0} reviews · ` : ''}${counts}</div>`}
     ${s.note ? `<div class="fine">${esc(s.note)}</div>` : ''}
     <h4>Buy and rent</h4>
-    ${priceRows ? `<table class="prices"><tr><th>Home</th><th>Buy</th><th>Rent</th></tr>${priceRows}</table>` : '<div class="fine">No price data.</div>'}
+    ${priceRows ? `<table class="prices"><tr><th>Home</th><th>Buy</th><th>Rent</th></tr>${priceRows}</table>` : data.dataset === 'maharera'
+      ? `<div class="links"><a href="${marketUrl('buy', crit.bhk)}" target="_blank" rel="noopener">Mumbai flats for sale ↗</a><a href="${marketUrl('rent', crit.bhk)}" target="_blank" rel="noopener">Mumbai rentals ↗</a></div>`
+      : '<div class="fine">No price data.</div>'}
     ${trend}
     <h4>Bedrooms</h4>
     ${unitRows ? `<table><tr><th>Unit</th><th>Bedrooms</th><th></th><th>Source</th></tr>${unitRows}</table>` : '<div class="fine">No unit types listed.</div>'}
@@ -494,7 +537,7 @@ function renderCard(s) {
       ${plans}
       ${!s.verified ? `<a href="${esc(issue)}" target="_blank" rel="noopener">Request a room check →</a>` : ''}
     </div>
-    <div class="fine">${s.rera_id ? 'RERA ' + esc(s.rera_id) + ' · ' : ''}${locationNote}</div>`;
+    <div class="fine">${s.rera_id ? 'RERA ' + esc(s.rera_id) + ' · ' : ''}${locationNote}${s.display_height_estimated ? ' · Display height estimated' : ''}</div>`;
   $('card').hidden = false;
   $('c-close').onclick = () => { stopTour(); closeCard(); };
   $('c-star').onclick = () => { toggle(myList, s.id); saveList(); renderCard(s); renderResults(); };
@@ -636,7 +679,7 @@ function buildControls() {
     navigator.geolocation.getCurrentPosition((p) => {
       $('ctl-locate').classList.remove('busy');
       const at = [p.coords.longitude, p.coords.latitude];
-      if (!youMarker) { const el = document.createElement('div'); el.className = 'you'; youMarker = new maplibregl.Marker({ element: el }); }
+      if (!youMarker) { const el = document.createElement('div'); el.className = 'you'; youMarker = new Marker({ element: el }); }
       youMarker.setLngLat(at).addTo(map);
       map.flyTo({ center: at, zoom: 15, bearing: 0, duration: 2000 });
     }, () => { $('ctl-locate').classList.remove('busy'); toast('Could not get your location.'); }, { enableHighAccuracy: true, timeout: 10000 });
@@ -659,7 +702,7 @@ function buildOnboarding() {
   const registry = data.dataset === 'maharera';
   const steps = [
     registry
-      ? ['Mumbai’s registered housing projects', `${c.listed.toLocaleString()} registrations across Mumbai City and Mumbai Suburban. Most map markers show the project’s postal area.`]
+      ? ['Mumbai’s registered housing projects', `${c.listed.toLocaleString()} registrations across Mumbai City and Mumbai Suburban. Gold buildings are mapped projects. Circles group registrations by postal area. Use Replay for the fly-in or Tour to fly between matches.`]
       : ['Every society in ' + data.city.name + ', on one map', `${c.on_map.toLocaleString()} housing societies, ${(c.for_sale || 0).toLocaleString()} homes for sale and ${(c.for_rent || 0).toLocaleString()} for rent. Each one has its prices, rents, resident ratings, what is nearby, and links to Google Maps.`],
     ['Start with what you cannot live without', registry ? 'Search by locality, PIN code, developer, project name or MahaRERA ID. Try the sample to see 2 BHK floor plans with at least 90 sq ft in every bedroom.'
       : 'Pick Buy or Rent and your budget. Then set the smallest bedroom you can live with, by both sides or by area in gaj or sq ft. Add amenities and what you want nearby, like a park within 500 m.'],
@@ -680,7 +723,7 @@ function buildOnboarding() {
   $('ob-back').onclick = () => { i = Math.max(0, i - 1); show(); };
   $('ob-skip').onclick = done;
   $('btn-guide').onclick = () => { i = 0; show(); $('onboard').hidden = false; };
-  if (!store.get('ff-onboarded', false) && !params.has('nointro') && !params.has('open') && !params.has('preset')) { show(); $('onboard').hidden = false; }
+  if (!registry && !store.get('ff-onboarded', false) && !params.has('nointro') && !params.has('open') && !params.has('preset')) { show(); $('onboard').hidden = false; }
 }
 
 // ---------- society search ----------
@@ -763,15 +806,18 @@ function stopTour() {
 
 function tour() {
   if (touring) { stopTour(); return; }
-  const list = ranked().slice(0, 10);
-  if (!list.length) { toast('No matches to tour. Loosen your filters.'); return; }
+  if (!map?.getSource('pts')) return;
+  const projects = ranked().filter(projectPoint);
+  if (cityId === 'mumbai') projects.sort((a, b) => Number(projectBuilding(b)) - Number(projectBuilding(a)));
+  const list = projects.slice(0, 10);
+  if (!list.length) { toast('No matches with individual map locations.'); return; }
   touring = true;
   $('btn-tour').textContent = 'Stop tour';
   $('btn-tour').classList.add('live');
   let i = 0;
   const next = () => {
     if (!touring) return;
-    if (i >= list.length) { stopTour(); closeCard(); map.flyTo({ ...OVERVIEW, pitch: is3d ? OVERVIEW.pitch : 0, duration: 4000 }); return; }
+    if (i >= list.length) { stopTour(); closeCard(); map.flyTo({ ...OVERVIEW, pitch: is3d ? OVERVIEW.pitch : 0, duration: reducedMotion ? 0 : 4000 }); return; }
     openSociety(list[i++].id);
     tourTimer = setTimeout(next, 7000);
   };

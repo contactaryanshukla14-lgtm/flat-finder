@@ -225,6 +225,7 @@ body[data-base=light] .maplibregl-ctrl-scale, body[data-base=light] .maplibregl-
   .card { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(46vh + 56px); max-height: 42vh; }
   .controls { right: 10px; bottom: calc(46vh + 60px); }
   #ctl-home { display: none; }
+  body[data-city=mumbai] #ctl-home { display: grid; }
   .maplibregl-ctrl-bottom-right { right: 0 !important; bottom: 46vh !important; }
 }
 @media (max-width: 700px) { body.has-card .controls, body.has-card .topbar { display: none; } }
@@ -264,6 +265,8 @@ body[data-base=light] .maplibregl-ctrl-scale, body[data-base=light] .maplibregl-
 @media (max-width: 700px) {
   .mobile-only { display: inline-flex !important; }
   #btn-tour, #btn-guide { display: none !important; }
+  body[data-city=mumbai] :is(#btn-replay, #btn-tour) { display: inline-flex !important; white-space: nowrap; }
+  body[data-city=mumbai] .topbar button { padding-inline: 10px; white-space: nowrap; }
   .mtabs { display: flex !important; position: absolute; z-index: 4; left: 0; right: 0; bottom: 46vh; padding: 8px 10px 0; gap: 6px; align-items: flex-end; }
   .mtabs button { flex: 1; padding: 9px 0; border-radius: 12px 12px 0 0; border: 1px solid var(--line); border-bottom: none; background: var(--glass); backdrop-filter: blur(12px); font-weight: 600; font-size: 13px; color: var(--muted); }
   .mtabs button.on { color: var(--text); background: var(--glass-strong); }

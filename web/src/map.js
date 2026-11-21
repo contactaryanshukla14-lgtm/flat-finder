@@ -51,9 +51,15 @@ export function createMap(container, { mobile }) {
   return map;
 }
 
-export function addSocietyLayers(map, shapes, points) {
+export function addSocietyLayers(map, shapes, points, { citywide = false } = {}) {
   map.addSource('shapes', { type: 'geojson', data: shapes, promoteId: 'sid' });
   map.addSource('pts', { type: 'geojson', data: points, promoteId: 'sid' });
+  if (citywide) {
+    map.addLayer({ id: 'context-buildings', type: 'fill-extrusion', source: 'shapes', minzoom: 9.75, maxzoom: 13,
+      filter: ['==', ['get', 'role'], 'context'],
+      paint: { 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-color': '#4d4c50',
+        'fill-extrusion-opacity': 0.7, 'fill-extrusion-vertical-gradient': true } });
+  }
   map.addLayer({ id: 'site-fill', type: 'fill', source: 'shapes', filter: ['==', ['get', 'role'], 'site'],
     paint: { 'fill-color': stateColor(COLORS.match),
       'fill-opacity': ['match', ['feature-state', 'st'], 'match', 0.13, 'likely', 0.1, 'probable', 0.1, 'unknown', 0.05, 'no', 0, 0.08] } });
@@ -65,7 +71,7 @@ export function addSocietyLayers(map, shapes, points) {
     paint: { 'circle-color': stateColor(COLORS.match), 'circle-blur': 1,
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2, 12, 6, 15, 24],
       'circle-opacity': ['match', ['feature-state', 'st'], 'match', 0.5, 'likely', 0.35, 'probable', 0.35, 'unknown', 0.14, 'no', 0, 0.25] } });
-  map.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'shapes', minzoom: 11.5, filter: ['==', ['get', 'role'], 'bld'],
+  map.addLayer({ id: 'bld', type: 'fill-extrusion', source: 'shapes', minzoom: citywide ? 9.75 : 11.5, filter: ['==', ['get', 'role'], 'bld'],
     paint: { 'fill-extrusion-color': stateColor(COLORS.match), 'fill-extrusion-height': ['get', 'h'], 'fill-extrusion-opacity': 0.95,
       'fill-extrusion-vertical-gradient': true } });
   map.addLayer({ id: 'labels', type: 'symbol', source: 'pts', minzoom: 13.2,
@@ -209,6 +215,9 @@ export function setBaseMode(map, mode) {
   for (const [id, props] of Object.entries(mode === 'light' ? LIGHT : DARK)) for (const [k, v] of Object.entries(props)) map.setPaintProperty(id, k, v);
   const c = PALETTES[mode];
   map.setPaintProperty('city', 'fill-extrusion-color', c.city);
+  if (map.getLayer('context-buildings')) {
+    map.setPaintProperty('context-buildings', 'fill-extrusion-color', mode === 'light' ? '#d7d1c6' : '#4d4c50');
+  }
   for (const [id, prop] of [['bld', 'fill-extrusion-color'], ['site-fill', 'fill-color'], ['site-line', 'line-color'], ['glow', 'circle-color']]) map.setPaintProperty(id, prop, colorBy(c));
   map.setPaintProperty('labels', 'text-color', c.label);
   map.setPaintProperty('labels', 'text-halo-color', c.halo);
