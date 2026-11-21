@@ -1,0 +1,488 @@
+{
+  "P51900014937": {
+    "source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-adrina",
+    "description_source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-adrina",
+    "locality": "Lower Parel",
+    "description": "Adrina is a residential tower at Lodha Park. The developer lists shared facilities including The Jewel clubhouse, a gym, multiple pools, a running track and children’s play areas.",
+    "bhk": [
+      3
+    ],
+    "amenities": [
+      "Swimming pool",
+      "Gym",
+      "Clubhouse",
+      "Jogging track",
+      "Kids play area",
+      "Cricket pitch",
+      "Sports court",
+      "Yoga studio",
+      "Gardens"
+    ],
+    "towers": 1,
+    "images": [
+      {
+        "file": "mumbai-photos/lodha-park.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:The_Lodha_Park_cluster.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "Lodha Park towers"
+      },
+      {
+        "file": "mumbai-photos/trump-venezia.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Trump_tower_and_Lodha_Veniza.jpg",
+        "author": "Creater903a",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "label": "Lodha Park and Lodha Venezia towers"
+      }
+    ]
+  },
+  "P51900001339": {
+    "source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-adrina",
+    "description_source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-adrina",
+    "locality": "Lower Parel",
+    "osm_feature": "way/113493159",
+    "description": "A residential development in the Worli–Lower Parel area. The site contains several named towers and shared indoor and outdoor facilities.",
+    "amenities": [
+      "Swimming pool",
+      "Gym",
+      "Clubhouse",
+      "Jogging track",
+      "Kids play area",
+      "Cricket pitch",
+      "Sports court",
+      "Yoga studio",
+      "Gardens"
+    ],
+    "images": [
+      {
+        "file": "mumbai-photos/lodha-park.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:The_Lodha_Park_cluster.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "Lodha Park towers"
+      },
+      {
+        "file": "mumbai-photos/trump-venezia.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Trump_tower_and_Lodha_Veniza.jpg",
+        "author": "Creater903a",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "label": "Lodha Park and Lodha Venezia towers"
+      }
+    ]
+  },
+  "P51900008345": {
+    "source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-world-towers",
+    "description_source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-world-towers",
+    "locality": "Lower Parel",
+    "osm_feature": "way/507222815",
+    "aliases": [
+      "World One",
+      "Lodha World Towers"
+    ],
+    "description": "This registration covers part of World One in the World Towers development. The map location is shared by the registrations at the same tower.",
+    "images": [
+      {
+        "file": "mumbai-photos/world-towers.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:The_World_towers.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "The World Towers exterior"
+      }
+    ]
+  },
+  "P51900008962": {
+    "source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-world-towers",
+    "description_source": "https://www.lodhagroup.com/projects/residential-property-in-worli/lodha-world-towers",
+    "locality": "Lower Parel",
+    "osm_feature": "way/507222815",
+    "aliases": [
+      "World One",
+      "Lodha World Towers"
+    ],
+    "description": "This registration covers part of World One in the World Towers development. The map location is shared by the registrations at the same tower.",
+    "images": [
+      {
+        "file": "mumbai-photos/world-towers.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:The_World_towers.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "The World Towers exterior"
+      }
+    ]
+  },
+  "P51900003316": {
+    "locality": "Worli",
+    "osm_feature": "way/603657825",
+    "aliases": [
+      "Omkar 1973"
+    ],
+    "description": "The map uses the OpenStreetMap boundary for the Omkar 1973 residential development and the footprints mapped within it.",
+    "description_source": "https://www.openstreetmap.org/way/603657825",
+    "images": [
+      {
+        "file": "mumbai-photos/omkar-1973.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Omkar_1973_towers.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "Omkar 1973 towers"
+      }
+    ]
+  },
+  "P51900006786": {
+    "locality": "Worli",
+    "osm_feature": "way/1466936024",
+    "aliases": [
+      "Palais Royale"
+    ],
+    "description": "The map follows the residential tower footprint recorded in OpenStreetMap.",
+    "description_source": "https://www.openstreetmap.org/way/1466936024",
+    "images": [
+      {
+        "file": "mumbai-photos/palais-royale.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Palais_Royale_1.jpg",
+        "author": "Tejas Itraj",
+        "license": "CC BY-SA 3.0",
+        "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+        "label": "Palais Royale exterior"
+      }
+    ]
+  },
+  "P51900012115": {
+    "locality": "Worli",
+    "osm_feature": "way/1430443320",
+    "aliases": [
+      "Oberoi 360 West",
+      "Three Sixty West"
+    ],
+    "description": "Three Sixty West is a mixed-use development in Worli. The gallery shows the exterior of the development.",
+    "description_source": "https://www.openstreetmap.org/way/1430443320",
+    "images": [
+      {
+        "file": "mumbai-photos/three-sixty-west.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Oberoi_360W.jpg",
+        "author": "Creater903a",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "label": "Three Sixty West exterior"
+      }
+    ]
+  },
+  "P51900031916": {
+    "source": "https://www.birlaestates.com/birla-niyaara-worli/",
+    "description_source": "https://www.birlaestates.com/birla-niyaara-worli/",
+    "locality": "Worli",
+    "aliases": [
+      "Birla Niyaara"
+    ],
+    "description": "The first registered phase of the Birla Niyaara development in Worli. The image shows Tower 1 under construction.",
+    "images": [
+      {
+        "file": "mumbai-photos/birla-niyaara.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Birla_niyara_t1.jpg",
+        "author": "Creater903a",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "Birla Niyaara Tower 1 under construction"
+      }
+    ]
+  },
+  "P51900054455": {
+    "source": "https://www.birlaestates.com/birla-niyaara-worli/",
+    "description_source": "https://www.birlaestates.com/birla-niyaara-worli/",
+    "locality": "Worli",
+    "aliases": [
+      "Birla Niyaara Silas"
+    ],
+    "description": "The second registered phase of Birla Niyaara in Worli. The developer’s site links to the phase disclosures."
+  },
+  "P51800003582": {
+    "locality": "Borivali East",
+    "osm_feature": "way/925230193",
+    "aliases": [
+      "Oberoi Sky City"
+    ],
+    "description": "This registration covers Sky City Towers A to D. The location is anchored at Tower A.",
+    "description_source": "https://www.openstreetmap.org/way/925230193",
+    "images": [
+      {
+        "file": "mumbai-photos/sky-city.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Oberoi_Sky_City.jpg",
+        "author": "SomePacifisticGuy",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "label": "Oberoi Sky City towers"
+      }
+    ]
+  },
+  "P51800028419": {
+    "locality": "Borivali East",
+    "osm_feature": "way/925230195",
+    "aliases": [
+      "Oberoi Sky City Tower F"
+    ],
+    "description": "Sky City Tower F joins the wider residential development in Borivali East. The photo shows the wider development.",
+    "description_source": "https://www.openstreetmap.org/way/925230195",
+    "images": [
+      {
+        "file": "mumbai-photos/sky-city.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Oberoi_Sky_City.jpg",
+        "author": "SomePacifisticGuy",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0",
+        "label": "Oberoi Sky City towers"
+      }
+    ]
+  },
+  "P51900005378": {
+    "locality": "Byculla East",
+    "osm_feature": "way/935083293",
+    "aliases": [
+      "Lodha Venezia"
+    ],
+    "description": "This registration covers upper floors of Lodha Venezia. The map shows the development boundary.",
+    "description_source": "https://www.openstreetmap.org/way/935083293"
+  },
+  "P51900029289": {
+    "locality": "Byculla East",
+    "aliases": [
+      "Lodha Venezia"
+    ]
+  },
+  "P51900003324": {
+    "osm_feature": "way/1289053389",
+    "description_source": "https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla",
+    "description": "This registration is part of the Piramal Aranya development in Byculla. The position shows the development site.",
+    "kind": "apartment"
+  },
+  "P51800077080": {
+    "source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/",
+    "description_source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/",
+    "locality": "Bhandup West",
+    "bhk": [
+      2,
+      3
+    ],
+    "amenities": [
+      "Clubhouse",
+      "Swimming pool",
+      "Gym",
+      "Kids play area",
+      "Indoor games",
+      "Jogging track",
+      "Landscaped gardens",
+      "Sports facilities"
+    ],
+    "description": "Godrej Nurture is a residential development on LBS Marg in Bhandup West. Its shared amenities include dedicated play areas, a swimming pool, gym and landscaped grounds.",
+    "developer_quote": {
+      "buy": {
+        "2": 20700000,
+        "3": 26100000
+      },
+      "as_of": "2026-11-21",
+      "source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/"
+    }
+  },
+  "P51800077085": {
+    "source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/",
+    "description_source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/",
+    "locality": "Bhandup West",
+    "bhk": [
+      2,
+      3
+    ],
+    "amenities": [
+      "Clubhouse",
+      "Swimming pool",
+      "Gym",
+      "Kids play area",
+      "Indoor games",
+      "Jogging track",
+      "Landscaped gardens",
+      "Sports facilities"
+    ],
+    "description": "Godrej Nurture is a residential development on LBS Marg in Bhandup West. Its shared amenities include dedicated play areas, a swimming pool, gym and landscaped grounds.",
+    "developer_quote": {
+      "buy": {
+        "2": 20700000,
+        "3": 26100000
+      },
+      "as_of": "2026-11-21",
+      "source": "https://www.godrejproperties.com/landing-page/mumbai/residential/godrej-nurture/"
+    }
+  },
+  "P51800020332": {
+    "kind": "apartment",
+    "source": "https://marathon.in/zaver-arcade/",
+    "description_source": "https://marathon.in/zaver-arcade/",
+    "locality": "Mulund West",
+    "towers": 1,
+    "layouts": [
+      {
+        "label": "2 BHK · units 1 and 4",
+        "bhk": 2,
+        "carpet_sqft": 700,
+        "source": "https://marathon.in/zaver-arcade/wp-content/uploads/sites/28/2025/04/za_mbrochure.pdf#page=6"
+      }
+    ],
+    "amenities": [
+      "Gym",
+      "Terrace garden",
+      "Indoor games"
+    ],
+    "description": "A residential tower on Zaver Road. The developer brochure lists 2 BHK layouts of 700 and 724 sq ft carpet."
+  },
+  "P51800010386": {
+    "source": "https://marathon.in/neohomes/status/",
+    "description_source": "https://marathon.in/neohomes/status/",
+    "locality": "Bhandup West",
+    "description": "This registration is part of the Marathon NeoHomes development in Bhandup West. See the floor-plan source for the dimensions of the documented layout."
+  },
+  "P51800026955": {
+    "source": "https://marathon.in/neohomes/status/",
+    "description_source": "https://marathon.in/neohomes/status/",
+    "locality": "Bhandup West",
+    "description": "This registration is part of the Marathon NeoHomes development in Bhandup West. See the floor-plan source for the dimensions of the documented layout."
+  },
+  "P51800026970": {
+    "source": "https://marathon.in/neohomes/status/",
+    "description_source": "https://marathon.in/neohomes/status/",
+    "locality": "Bhandup West",
+    "description": "This registration is part of the Marathon NeoHomes development in Bhandup West. See the floor-plan source for the dimensions of the documented layout."
+  },
+  "P51800030751": {
+    "source": "https://marathon.in/neohomes/neopark/",
+    "description_source": "https://marathon.in/neohomes/neopark/",
+    "locality": "Bhandup West",
+    "description": "A wing of Marathon NeoPark, a studio and 1 BHK development. The developer lists a gym, indoor games, a children’s play area and a walking track.",
+    "amenities": [
+      "Gym",
+      "Indoor games",
+      "Kids play area",
+      "Walking track"
+    ]
+  },
+  "P51800030752": {
+    "source": "https://marathon.in/neohomes/neopark/",
+    "description_source": "https://marathon.in/neohomes/neopark/",
+    "locality": "Bhandup West",
+    "description": "A wing of Marathon NeoPark, a studio and 1 BHK development. The developer lists a gym, indoor games, a children’s play area and a walking track.",
+    "amenities": [
+      "Gym",
+      "Indoor games",
+      "Kids play area",
+      "Walking track"
+    ]
+  },
+  "P51800032741": {
+    "source": "https://marathon.in/ekveera/",
+    "description_source": "https://marathon.in/wp-content/uploads/2022/03/ekveera_brochure_mobile_01.pdf",
+    "locality": "Mulund West",
+    "description": "Marathon Ekveera is on Dadasaheb Gaikwad Road near Mulund station. The developer brochure links this registration to the project address."
+  },
+  "P51900008204": {
+    "images": [
+      {
+        "file": "mumbai-photos/minerva.jpg",
+        "full": "https://commons.wikimedia.org/wiki/File:Lokhandwala_Minerva.jpg",
+        "author": "Upshot555",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
+        "label": "Lokhandwala Minerva exterior"
+      }
+    ],
+    "locality": "Mahalaxmi",
+    "aliases": [
+      "Lokhandwala Minerva"
+    ]
+  },
+  "P51900000469": {
+    "locality": "Worli",
+    "osm_feature": "way/924453775",
+    "description": "Tower A of the Indiabulls Blu residential development in Worli.",
+    "description_source": "https://www.openstreetmap.org/way/924453775",
+    "layouts": [
+      {
+        "label": "2 BHK · filed layout",
+        "bhk": 2,
+        "carpet_sqft": 809,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "2 BHK · filed layout",
+        "bhk": 2,
+        "carpet_sqft": 827,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "2 BHK · filed layout",
+        "bhk": 2,
+        "carpet_sqft": 836,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "3 BHK · filed layout",
+        "bhk": 3,
+        "carpet_sqft": 1173,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "3 BHK · filed layout",
+        "bhk": 3,
+        "carpet_sqft": 1291,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "3 BHK · filed layout",
+        "bhk": 3,
+        "carpet_sqft": 1295,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "4 BHK · filed layout",
+        "bhk": 4,
+        "carpet_sqft": 1387,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "4 BHK · filed layout",
+        "bhk": 4,
+        "carpet_sqft": 1716,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      },
+      {
+        "label": "4 BHK · filed layout",
+        "bhk": 4,
+        "carpet_sqft": 1758,
+        "confidence": "rera",
+        "source": "https://www.mumbaipropertyexchange.com/reraFiles/P51900000469-Application.pdf#page=3"
+      }
+    ]
+  },
+  "P51900000473": {
+    "locality": "Worli",
+    "osm_feature": "way/924453774",
+    "description": "Tower B of the Indiabulls Blu residential development in Worli.",
+    "description_source": "https://www.openstreetmap.org/way/924453774"
+  },
+  "P51900000843": {
+    "locality": "Worli",
+    "osm_feature": "way/924453776",
+    "description": "Tower C of the Indiabulls Blu residential development in Worli.",
+    "description_source": "https://www.openstreetmap.org/way/924453776"
+  }
+}

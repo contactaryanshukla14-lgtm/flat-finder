@@ -1,4 +1,15 @@
 {
+  "P51800020332": [
+    {
+      "label": "2 BHK · units 2 and 3",
+      "bhk": 2,
+      "carpet_sqft": 724,
+      "bedrooms": ["10'7\"x12'8\"", "10'7\"x12'8\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/zaver-arcade/wp-content/uploads/sites/28/2025/04/za_mbrochure.pdf",
+      "page": 6
+    }
+  ],
   "P51800016063": [
     {
       "label": "1 BHK · units 1 and 4",

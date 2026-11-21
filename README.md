@@ -2,7 +2,7 @@
 
 [Open Mumbai Flat Finder on Vercel](https://mumbai-flat-finder.vercel.app/) · [GitHub Pages](https://contactaryanshukla14-lgtm.github.io/flat-finder/)
 
-This fork opens to Mumbai and keeps the original Flat Finder map, filters, research log and shortlist. Mumbai includes **5,803 residential and mixed-use MahaRERA registrations** across Mumbai City and Mumbai Suburban, from the 17 November 2026 snapshot. Separate wings may have their own registration.
+This fork opens to Mumbai and keeps the original Flat Finder map, filters, research log and shortlist. Mumbai includes **5,807 MahaRERA registrations** for housing, mixed-use developments and plots across Mumbai City and Mumbai Suburban, based on the 17 November 2026 snapshot. Separate wings may have their own registration.
 
 ```sh
 cd web
@@ -12,15 +12,17 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). Search using a project, developer, locality, postal PIN code or MahaRERA ID. Click a numbered circle to filter to that PIN code. **Load sample search** demonstrates the 2 BHK filter with at least 90 sq ft in every bedroom. Gurugram remains available in the city selector.
 
-Mumbai has 175 individual project locations, including 129 project buildings rendered in 3D. The overview includes 3,000 surrounding OpenStreetMap building footprints. Display heights use OpenStreetMap heights or floor counts where available. Heights are estimated for the other footprints. **Replay** flies in to Lower Parel, **Tour** visits individually mapped matches, and the home icon shows the whole city. Numbered circles group projects at the post office location for the filed PIN code.
+Mumbai has 189 individual project locations and 204 linked 3D footprints, including multiple real towers within named development boundaries. The overview includes 3,000 surrounding OpenStreetMap building footprints. Display heights use OpenStreetMap heights or floor counts where available. Heights are estimated for the other footprints. **Replay** flies in to Lower Parel, **Tour** visits individually mapped matches, and the home icon shows the whole city. Numbered circles group projects at the post office location for the filed PIN code.
 
-Developer floor-plan measurements link to the exact PDF page for selected layouts. Filter results distinguish recorded matches from projects missing the evidence. **Buy** and **Rent** link to current Mumbai listings on Magicbricks, where users can filter by budget. The registry data contains no listing prices or availability.
+Selected cards show credited Wikimedia Commons photos, developer amenities, and links to the exact floor-plan page with measured bedrooms. The [Mumbai Property Exchange index](https://www.mumbaipropertyexchange.com/mumbai-property-price-index) provides locality price history. [Its micro-market data](https://www.mumbaipropertyexchange.com/press) provides carpet-area asking-rate and rent benchmarks. Rates multiplied by reported carpet areas are labelled estimates. The budget filter treats these as probable matches. Advertised developer starting prices are dated and labelled separately. **Buy** and **Rent** also link to Magicbricks for current listings.
 
 Mumbai data comes from [AskRera’s MahaRERA registry export](https://askrera.com/data/maharera-registered-projects/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), filtered to both Mumbai districts and joined to the [India Post PIN Code Directory](https://data.gov.in/resource/all-india-pincode-directory-till-last-month) ([CSV mirror](https://github.com/dropdevrahul/pincodes-india/blob/main/pincode.csv), Government Open Data License – India). Locations, footprints and proximity data derived from [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) are distributed under [ODbL](https://opendatacommons.org/licenses/odbl/1-0/). The published Mumbai JSON and GeoJSON contain this data, based on the [BBBike Bombay extract](https://download.bbbike.org/osm/bbbike/Bombay/). To refresh the data:
 
 ```sh
 uv run --with osmium --with shapely python pipeline/mumbai_registry.py maharera-registered-projects.csv pincode.csv --osm Bombay.osm.pbf
 ```
+
+The build reads project sources and photo credits from `data/mumbai-projects.json` and measured rooms from `data/verified/mumbai.json`. The static `web/public/data/mumbai-market.json` snapshot contains Mumbai City and Suburban localities from the Mumbai Property Exchange `price-index-data` and `micro-market` endpoints. The history uses observations with a positive sample count.
 
 The CLI uses the bundled Mumbai snapshot by default. Try `node cli/flatfinder.mjs --bhk 2 --min-bedroom 9x10`. Vercel and GitHub Pages serve the static browser build. The fork retains the original Cloudflare Pages MCP function at `web/functions/mcp.js`.
 

@@ -78,6 +78,12 @@ describe('buy and rent', () => {
     expect(matchSociety(s, crit({ mode: 'rent', maxRent: 75000 }))).toBe('match');
     expect(matchSociety(soc(), crit({ mode: 'rent', maxRent: 10000 }))).toBe('match');
   });
+  it('marks registry budget results based on locality estimates as probable', () => {
+    const registry = soc({ ...s, listing_source: null, unit_types: [{ bhk: 4, bedrooms: [[12, 13]], rooms_complete: true }] });
+    expect(matchSociety(registry, crit({ bhk: [4], mode: 'rent', maxRent: 90000 }))).toBe('probable');
+    expect(matchSociety(registry, crit({ bhk: [4], maxPrice: 5e7, room: ROOM }))).toBe('probable');
+    expect(matchSociety(registry, crit({ bhk: [4], mode: 'rent', maxRent: 70000 }))).toBe('no');
+  });
   it('formats rupees', () => {
     expect(formatINR(41500000)).toBe('₹4.15 Cr');
     expect(formatINR(70000)).toBe('₹70k');

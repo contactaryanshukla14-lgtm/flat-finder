@@ -49,6 +49,7 @@ section { display: flex; flex-direction: column; gap: 7px; }
 .chip.on small { color: inherit; opacity: .7; }
 .more-chip { border-style: dashed; color: var(--accent); }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+body[data-city=mumbai] #f-kind { grid-template-columns: repeat(3, 1fr); }
 .tile { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 8px; border-radius: 12px; border: 1px solid var(--chip-line); background: var(--chip); cursor: pointer; font-size: 10.5px; transition: all .2s; }
 .tile svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
 .tile:hover { border-color: var(--accent); }
@@ -286,6 +287,10 @@ body[data-base=light] .maplibregl-ctrl-scale, body[data-base=light] .maplibregl-
   body.m-collapsed .controls { bottom: 110px; }
 }
 .photos img { min-width: 138px; min-height: 92px; object-fit: cover; }
+.project-photo { flex: 0 0 142px; margin: 0; }
+.project-photo img { width: 142px; height: 132px; object-fit: cover; border-radius: 10px; }
+.project-photo figcaption { padding-top: 4px; }
+.market { display: flex; flex-direction: column; gap: 5px; padding: 10px; background: var(--chip); border-radius: 10px; font-size: 12px; }
 .dual { margin-bottom: 18px; }
 .dual .bubble { bottom: auto; top: 22px; }
 

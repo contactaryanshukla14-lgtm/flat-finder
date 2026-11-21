@@ -125,6 +125,7 @@ export function matchSociety(s, c) {
   }
   if (c.kinds.length && !c.kinds.includes(s.kind)) return 'no';
   let needsEvidence = false;
+  let estimatedBudget = false;
   for (const key of c.near || []) {
     if (isNear(s, key)) continue;
     if (s.location_precision && !s.nearby_source) needsEvidence = true;
@@ -141,6 +142,7 @@ export function matchSociety(s, c) {
     if (p && budget && p.value > budget) return 'no';
     if (p && floor && p.value < floor) return 'no';
     if (!p && s.listing_source === null) needsEvidence = true;
+    estimatedBudget = s.listing_source === null && !!p?.estimated;
   }
   for (const key of c.amenities) {
     if (hasAmenity(s, key)) continue;
@@ -149,7 +151,7 @@ export function matchSociety(s, c) {
   }
 
   const unitFilters = c.bhk.length || c.minSqft > 0 || c.maxSqft || c.room || c.roomArea;
-  if (!unitFilters) return needsEvidence ? 'unknown' : 'match';
+  if (!unitFilters) return needsEvidence ? 'unknown' : estimatedBudget ? 'probable' : 'match';
   const units = s.unit_types.filter((u) => !c.bhk.length || c.bhk.includes(u.bhk));
   if (!units.length) return s.unit_types.length ? 'no' : 'unknown';
   let best = 'no';
@@ -158,7 +160,8 @@ export function matchSociety(s, c) {
     if (RANK[r] > RANK[best]) best = r;
     if (best === 'match') break;
   }
-  return needsEvidence && best !== 'no' ? 'unknown' : best;
+  if (needsEvidence && best !== 'no') return 'unknown';
+  return estimatedBudget && RANK[best] > RANK.probable ? 'probable' : best;
 }
 
 export function feetLabel(ft) {

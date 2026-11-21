@@ -14,12 +14,17 @@ from verified import unit_from_verified
 
 
 DISTRICTS = ('Mumbai City', 'Mumbai Suburban')
-RESIDENTIAL_TYPES = {'Residential / Group Housing', 'Mixed'}
+PROPERTY_KINDS = {'Residential / Group Housing': 'apartment', 'Mixed': 'mixed', 'Plotted': 'plot'}
 ARANYA = 'https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla'
 REGISTRY = 'https://askrera.com/data/maharera-registered-projects/'
 EMINENCE = 'https://marathon.in/eminence/'
 MARQ = 'https://www.lodhagroup.com/projects/residential-property-in-mumbai/lodha-marq'
 PLAN_FILE = WEB.parents[2] / 'data' / 'verified' / 'mumbai.json'
+PROJECT_FILE = WEB.parents[2] / 'data' / 'mumbai-projects.json'
+MARKET_FILE = WEB / 'mumbai-market.json'
+MARKET_ALIASES = {'Malad West Dely': 'Malad West', 'Bhandup West': 'Bhandup', 'Bhandup East': 'Bhandup',
+                  'Kurla East': 'Kurla', 'Kurla West': 'Kurla', 'Vikhroli East': 'Vikhroli',
+                  'Vikhroli West': 'Vikhroli', 'Jogeshwari East': 'Jogeshwari', 'Jogeshwari West': 'Jogeshwari'}
 ARANYA_AMENITIES = ['Gym', 'Library', 'Viewing deck']
 DEVELOPER_DATA = {
     'P51900018039': dict(bhk=[2, 3, 4, 5], ready=True, source=ARANYA, locality='Byculla',
@@ -104,10 +109,10 @@ STATUS = {'ongoing': 'Ongoing', 'ongoing_extended': 'Ongoing (extended)', 'compl
           'lapsed': 'Lapsed', 'abeyance': 'In abeyance', 'deregistered': 'Deregistered'}
 
 
-def society(row, area, plans):
+def society(row, area, plans, projects):
     identifier = row['rera_id'].strip().upper()
     name = row['project_name'].strip()
-    extra = DEVELOPER_DATA.get(identifier, {})
+    extra = {**DEVELOPER_DATA.get(identifier, {}), **projects.get(identifier, {})}
     pin = row['pincode'].strip()
     locality = extra.get('locality') or (area or {}).get('name') or row['taluka'].strip() or row['district']
     coords = extra.get('coords') or (area or {}).get('coords') or [None, None]
@@ -115,23 +120,30 @@ def society(row, area, plans):
     registered_units = row['total_units'].strip()
     verified_layouts = plans.get(identifier, [])
     verified_bhk = {unit['bhk'] for unit in verified_layouts}
-    layouts = verified_layouts + [
+    sourced_layouts = extra.get('layouts', [])
+    sourced_bhk = {unit['bhk'] for unit in sourced_layouts}
+    layouts = verified_layouts + [dict(unit, bedrooms=[], rooms_complete=False, confidence=unit.get('confidence', 'developer'),
+                                     source=unit.get('source') or extra['source']) for unit in sourced_layouts] + [
         {'label': f'{bhk} BHK', 'bhk': bhk, 'size_sqft': extra.get('sizes', {}).get(bhk),
          'bedrooms': [], 'rooms_complete': False, 'confidence': 'developer', 'source': extra['source']}
-        for bhk in extra.get('bhk', []) if bhk not in verified_bhk
+        for bhk in extra.get('bhk', []) if bhk not in verified_bhk and bhk not in sourced_bhk
     ]
-    aliases = sorted({row['district'], row['taluka'].strip(), pin, *((area or {}).get('aliases') or [])} - {'', locality})
+    aliases = sorted({row['district'], row['taluka'].strip(), pin, *((area or {}).get('aliases') or []),
+                      *extra.get('aliases', [])} - {'', locality})
     if row['district'] == 'Mumbai City':
         aliases.append('South Mumbai')
-    return {
+    kind = extra.get('kind') or PROPERTY_KINDS[row['project_type']]
+    project = {
         'id': identifier, 'rera_id': identifier, 'name': name, 'developer': row['promoter_name'].strip(),
         'locality': locality, 'district': row['district'], 'pincode': pin, 'locality_aliases': aliases,
         'lng': coords[0], 'lat': coords[1], 'location_precision': precision,
         'location_source': extra.get('location_source'),
         'status': 'Ready to move' if extra.get('ready') else STATUS.get(row['status']),
         'possession': row['proposed_completion'] or None,
-        'units': int(registered_units) if registered_units.isdigit() else None, 'towers': None, 'acres': None,
-        'price_min': None, 'price_max': None, 'kind': 'apartment', 'amenities': extra.get('amenities', []),
+        'units': int(registered_units) if registered_units.isdigit() else None, 'towers': extra.get('towers'), 'acres': extra.get('acres'),
+        'price_min': None, 'price_max': None, 'kind': kind,
+        'config_text': next(name for name, value in PROPERTY_KINDS.items() if value == kind),
+        'amenities': extra.get('amenities', []),
         'unit_types': layouts, 'verified': any(unit['rooms_complete'] for unit in verified_layouts), 'note': extra.get('note'),
         'amen_facts': {}, 'nearby': {}, 'prices': {},
         'rating': None, 'rating_count': None, 'review_count': None,
@@ -140,27 +152,58 @@ def society(row, area, plans):
         'url_label': 'MahaRERA project record', 'developer_url': extra.get('source'),
         'gmaps': 'https://www.google.com/maps/search/?api=1&query=' + quote(f'{name}, {locality}, Mumbai'),
     }
+    if extra.get('osm_feature'):
+        project['osm_feature'] = f"https://www.openstreetmap.org/{extra['osm_feature']}"
+    if extra.get('images'):
+        project['photo_count'] = len(extra['images'])
+    return project
+
+
+def add_market(project, market):
+    locality = project['locality']
+    key = locality if locality in market else MARKET_ALIASES.get(locality)
+    if project['kind'] == 'plot' or not key or key not in market:
+        return
+    project['market_key'] = key
+    if project['location_precision'] != 'project' and not project['developer_url']:
+        return  # postal areas give context but an approximate locality must not drive a property budget
+    area_data = market[key]
+    sizes = defaultdict(set)
+    for unit in project['unit_types']:
+        if unit.get('carpet_sqft'):
+            sizes[unit['bhk']].add(unit['carpet_sqft'])
+    for bhk, areas in sizes.items():
+        area = median(areas)
+        prices = {}
+        for mode, metric, step in [('buy', 'resale_psf', 100000), ('rent', 'rent_psf_mo', 1000)]:
+            rate = area_data.get(metric)
+            if rate:
+                prices[f'{mode}_est'] = {'value': round(rate * area / step) * step,
+                                         'basis': f"{key} median asking rate × {area:g} sq ft reported carpet area ({area_data['as_of']})"}
+        if prices:
+            project['prices'][bhk] = prices
 
 
 def build(registry, pincodes, output=WEB, osm=None):
     areas = post_offices(pincodes)
     plan_data = json.loads(PLAN_FILE.read_text(encoding='utf-8')) if PLAN_FILE.exists() else {}
     plans = {identifier: [unit_from_verified(unit) for unit in units] for identifier, units in plan_data.items()}
+    extras = json.loads(PROJECT_FILE.read_text(encoding='utf-8'))
+    market = json.loads(MARKET_FILE.read_text(encoding='utf-8'))
     projects = {}
     as_of = ''
     for row in records(registry):
-        if row['district'] not in DISTRICTS or row['project_type'] not in RESIDENTIAL_TYPES:
-            continue
         identifier = row['rera_id'].strip().upper()
         name = row['project_name'].strip()
-        if not identifier or not name:
+        if row['district'] not in DISTRICTS or not identifier or not name:
+            continue
+        if row['project_type'] not in PROPERTY_KINDS and not extras.get(identifier, {}).get('kind'):
             continue
         as_of = max(as_of, row['as_of'])
-        projects[identifier] = society(row, areas.get(row['pincode'].strip()), plans)
+        projects[identifier] = society(row, areas.get(row['pincode'].strip()), plans, extras)
     if not projects or {p['district'] for p in projects.values()} != set(DISTRICTS):
         raise ValueError('The registry export must contain housing projects in both Mumbai districts.')
     projects = sorted(projects.values(), key=lambda p: (not p['unit_types'], p['name'].casefold(), p['id']))
-    on_map = sum(p['lat'] is not None for p in projects)
     config = json.loads((WEB.parents[2] / 'data' / 'cities.json').read_text(encoding='utf-8'))['mumbai']
     shapes = []
     sources = [REGISTRY, 'https://data.gov.in/resource/all-india-pincode-directory-till-last-month']
@@ -172,15 +215,28 @@ def build(registry, pincodes, output=WEB, osm=None):
         {'sid': p['id'], 'step': 'MahaRERA registration', 'finding': f"{p['rera_id']} · {p['locality']}", 'url': p['url']}
         for p in projects
     ]
+    details = {}
     for p in projects:
+        add_market(p, market['areas'])
+        extra = extras.get(p['id'], {})
+        detail = {k: extra[k] for k in ('images', 'description', 'description_source', 'developer_quote') if k in extra}
+        if detail:
+            details[p['id']] = detail
         if p['location_source']:
             events.append({'sid': p['id'], 'step': 'Mapped project', 'finding': p['locality'], 'url': p['location_source']})
+        if p['amenities'] and p['developer_url']:
+            events.append({'sid': p['id'], 'step': 'Checked developer amenities', 'finding': ', '.join(p['amenities'][:4]),
+                           'url': p['developer_url']})
+        if p.get('photo_count'):
+            events.append({'sid': p['id'], 'step': 'Matched building photo', 'finding': p['locality'],
+                           'url': detail['images'][0]['full']})
         for unit in p['unit_types']:
             if unit.get('confidence') == 'primary':
                 source = unit['source'] + f"#page={unit['page']}"
                 events.append({'sid': p['id'], 'step': f"Read floor plan p. {unit['page']}",
                                'finding': f"{unit['label']} · {', '.join(unit['bedrooms_printed'])}",
                                'url': source, 'verified': True, 'unit': unit['label']})
+    on_map = sum(p['lat'] is not None for p in projects)
     data = {
         'city': {'id': 'mumbai', 'name': config['name'], 'center': config['center'], 'zoom': config['zoom']},
         'dataset': 'maharera', 'as_of': as_of,
@@ -188,7 +244,9 @@ def build(registry, pincodes, output=WEB, osm=None):
                    'project_pins': sum(p['location_precision'] == 'project' for p in projects),
                    'project_buildings': sum(f['properties']['role'] == 'bld' for f in shapes),
                    'context_buildings': sum(f['properties']['role'] == 'context' for f in shapes),
-                   'verified': sum(p['verified'] for p in projects)},
+                   'verified': sum(p['verified'] for p in projects), 'photos': sum(bool(p.get('photo_count')) for p in projects),
+                   'priced': sum(bool(p['prices']) for p in projects),
+                   'amenities': sum(bool(p['amenities']) for p in projects)},
         'sources': sources,
         'societies': projects,
         'events': events,
@@ -199,7 +257,7 @@ def build(registry, pincodes, output=WEB, osm=None):
         (output / name).write_text(json.dumps(contents, separators=(',', ':')), encoding='utf-8')
 
     write('mumbai.json', data)
-    write('mumbai-details.json', {})
+    write('mumbai-details.json', details)
     write('mumbai-shapes.geojson', {'type': 'FeatureCollection', 'features': shapes})
     write_csv(output / 'mumbai-societies.csv', output / 'mumbai-units.csv', projects, source_column='project_source_url')
     cities_file = output / 'cities.json'

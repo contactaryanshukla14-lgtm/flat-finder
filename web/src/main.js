@@ -28,7 +28,7 @@ const KINDS = [
 const AMEN_LABELS = { squash: 'Squash', pool: 'Pool', gym: 'Gym', club: 'Clubhouse', tennis: 'Tennis', badminton: 'Badminton', jogging: 'Jogging track', kids: 'Kids play' };
 const DIVY = { // Divy's own Gurugram search, shown as the example
   ...structuredClone(DEFAULT_CRITERIA), kinds: ['apartment'], bhk: [2, 3, 4], roomArea: 138, minSqft: 1620, amenities: ['squash'] }; // 11'3" x 12'3" = 138 sq ft
-const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), bhk: [2], roomArea: 90 };
+const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), kinds: [], bhk: [2], roomArea: 90 };
 const MUMBAI_FLY_IN = { center: [72.8308, 19.0037], zoom: 14.9, pitch: 59, bearing: 0 }; // Lower Parel
 const DEFAULT_CITY = 'mumbai';
 const located = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng);
@@ -44,7 +44,7 @@ const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', prob
 let crit = structuredClone(DEFAULT_CRITERIA);
 let baseMode = BASE_MODES.includes(params.get('map')) ? params.get('map') : 'streets';
 let roomMode = 'off', areaUnit = 'gaj', sortBy = 'best';
-let data, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
+let data, market, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
 const preset = () => cityId === 'mumbai' ? MUMBAI_SAMPLE : DIVY;
 let myList = [], allAmenities = [];
 const postalGroups = new Map();
@@ -53,14 +53,19 @@ const highlights = { glow: true, bounds: true, labels: true, ...store.get('ff-hi
 async function boot() {
   const cities = await fetch(dataUrl('cities.json')).then((r) => r.json()).catch(() => ({ mumbai: { name: 'Mumbai' } }));
   cityId = Object.hasOwn(cities, params.get('city')) ? params.get('city') : DEFAULT_CITY;
-  const [city, shapes] = await Promise.all([
+  const [city, shapes, localMarket] = await Promise.all([
     fetch(dataUrl(`${cityId}.json`)).then((r) => r.json()),
     fetch(dataUrl(`${cityId}-shapes.geojson`)).then((r) => r.json()),
+    cityId === 'mumbai' ? fetch(dataUrl('mumbai-market.json')).then((r) => r.json()).catch(() => null) : null,
   ]);
   data = city;
+  market = localMarket;
   document.title = cityId === 'mumbai' ? 'Mumbai Flat Finder' : 'Flat Finder';
   document.body.dataset.city = cityId;
-  if (cityId === 'mumbai') $('preset-divy').textContent = 'Load sample search';
+  if (cityId === 'mumbai') {
+    crit.kinds = [];
+    $('preset-divy').textContent = 'Load sample search';
+  }
   OVERVIEW.center = city.city.center;
   OVERVIEW.zoom = city.city.zoom || OVERVIEW.zoom;
   byId = new Map(city.societies.map((s) => [s.id, s]));
@@ -76,9 +81,12 @@ async function boot() {
   if (city.dataset === 'maharera') {
     $('note').textContent = `${c.listed.toLocaleString()} registrations · ${c.project_buildings.toLocaleString()} 3D project buildings · Circles group PIN codes`;
     $('about-prices').innerHTML = `Registered projects from <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Circles are approximate postal locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Named locations, footprints and nearby places include data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors (ODbL)</a>. Building heights are estimated where they are missing in OpenStreetMap.`;
-    $('budget-filter').hidden = true;
+    $('budget-basis').hidden = false;
     $('market-listings').hidden = false;
-    for (const option of $('f-sort').options) if (['price', 'listings'].includes(option.value)) option.hidden = true;
+    for (const option of $('f-sort').options) {
+      if (['score', 'rating', 'listings'].includes(option.value)) option.hidden = true;
+      if (option.value === 'price') option.textContent = 'Estimated price, low to high';
+    }
     $('dl-all').querySelector('small').textContent = 'All registered projects, postal areas and sources';
   } else {
     $('note').textContent = `${c.on_map.toLocaleString()} societies · ${(c.for_sale || 0).toLocaleString()} homes for sale, ${(c.for_rent || 0).toLocaleString()} for rent on Magicbricks · ${c.verified} verified from brochures and HRERA plans`;
@@ -261,8 +269,11 @@ function buildFilters() {
     else { crit.minPrice = a > 0 ? a * unit : null; crit.maxPrice = b >= top ? null : b * unit; }
     labels(); applyFilters();
   } });
+  const kinds = cityId === 'mumbai' ? [
+    ['apartment', 'Residential', KINDS[0][2]], ['mixed', 'Mixed-use', KINDS[1][2]], KINDS[3],
+  ] : KINDS;
   redrawFilters = () => {
-    $('f-kind').replaceChildren(...KINDS.map(([k, l, icon]) => chip(`<svg viewBox="0 0 24 24">${icon}</svg><span>${l}</span>`, crit.kinds.includes(k), () => { toggle(crit.kinds, k); redrawFilters(); applyFilters(); }, 'tile')));
+    $('f-kind').replaceChildren(...kinds.map(([k, l, icon]) => chip(`<svg viewBox="0 0 24 24">${icon}</svg><span>${l}</span>`, crit.kinds.includes(k), () => { toggle(crit.kinds, k); redrawFilters(); applyFilters(); }, 'tile')));
     $('f-bhk').replaceChildren(...[1, 2, 3, 4, 5].map((n) => chip(n === 5 ? '5+' : String(n), crit.bhk.includes(n), () => {
       toggle(crit.bhk, n); if (n === 5) toggle(crit.bhk, 6); redrawFilters(); applyFilters(); })));
     const custom = crit.amenities.filter((k) => k.startsWith('n:'));
@@ -384,8 +395,9 @@ function renderResults() {
   if (counts.unknown) bits.push(`${counts.unknown.toLocaleString()} ${data.dataset === 'maharera' ? 'missing data for these filters' : 'not checked yet'}`);
   $('count-sub').textContent = bits.join(' · ');
   $('v-list').textContent = myList.length ? `${myList.length} saved` : 'empty';
+  const estimatedBudget = cityId === 'mumbai' && (crit.mode === 'rent' ? crit.minRent || crit.maxRent : crit.minPrice || crit.maxPrice);
   const groups = rooms
-    ? [['match', 'Rooms read from floor plans: every bedroom passes'], ['likely', 'Likely: rooms read so far pass'], ['probable', 'Probably fits: estimated from unit size, plans not read yet']]
+    ? [['match', 'Rooms read from floor plans: every bedroom passes'], ['likely', 'Likely: rooms read so far pass'], ['probable', estimatedBudget ? 'Probably fits the estimated budget' : 'Probably fits: estimated from unit size, plans not read yet']]
     : [['match', null]];
   const all = ranked();
   $('results').replaceChildren(...groups.flatMap(([st, title]) => {
@@ -468,7 +480,7 @@ function renderCard(s) {
       ? u.bedrooms.map((r) => `<span class="${bad(r) ? 'fail' : ''}">${feetLabel(r[0])} × ${feetLabel(r[1])}</span>`).join(', ') + (u.rooms_complete ? '' : ' <span class="fine">(not all rooms read)</span>')
         + (u.confidence === 'ocr' ? ` <span class="fine">(read from the plan by ${esc(u.checked_by || 'OCR')})</span>` : '')
       : u.est_short ? `<span class="fine">plans not read · estimated at least ${feetLabel(u.est_short)} wide, ~${u.est_area} sq ft</span>` : '<span class="fine">room sizes not read yet</span>';
-    const srcLabel = u.confidence === 'developer' ? 'developer' : u.confidence === 'ai' || u.confidence === 'ocr' ? 'plan image' : u.confidence === 'primary' ? `plan${u.page ? ' p.' + esc(u.page) : ''}` : `portal${u.page ? ' p.' + esc(u.page) : ''}`;
+    const srcLabel = u.confidence === 'rera' ? 'MahaRERA filing' : u.confidence === 'developer' ? 'developer' : u.confidence === 'ai' || u.confidence === 'ocr' ? 'plan image' : u.confidence === 'primary' ? `plan${u.page ? ' p.' + esc(u.page) : ''}` : `portal${u.page ? ' p.' + esc(u.page) : ''}`;
     const source = u.confidence === 'primary' && /^\d+$/.test(u.page) && !u.source?.includes('#') ? `${u.source}#page=${u.page}` : u.source;
     const src = u.source ? `<a href="${esc(source)}" target="_blank" rel="noopener">${srcLabel}</a>` : '';
     const size = u.super_sqft ? `${u.super_sqft.toLocaleString()} super` : u.carpet_sqft ? `${u.carpet_sqft.toLocaleString()} carpet` : u.size_sqft ? `${u.size_sqft.toLocaleString()}` : '';
@@ -486,11 +498,11 @@ function renderCard(s) {
   const amen = s.amenities.map((a) => `<span class="${[...want].some((w) => a.toLowerCase().includes(w)) ? 'hit' : ''}">${esc(a)}</span>`).join('');
   const plans = Object.entries(s.plan_links || {}).map(([b, urls]) => urls.slice(0, 2).map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${b} BHK plan${urls.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' ')).join(' ');
   const issue = `${REPO}/issues/new?title=${encodeURIComponent('Research: ' + s.name)}&body=${encodeURIComponent(`Please verify room sizes and amenities for ${s.name} (${s.locality || ''}).\n\nPortal page: ${s.url}\n${s.brochure_url ? 'Brochure: ' + s.brochure_url : ''}`)}`;
-  const facts2 = [s.towers && `${s.towers} towers`, s.units && `${Number(s.units).toLocaleString()} units`, s.acres && `${s.acres} acres`, s.status, s.possession && `possession ${s.possession}`].filter(Boolean).join(' · ');
+  const facts2 = [s.towers && `${s.towers} ${s.towers === 1 ? 'tower' : 'towers'}`, s.units && `${Number(s.units).toLocaleString()} units`, s.acres && `${s.acres} acres`, s.status, s.possession && `possession ${s.possession}`].filter(Boolean).join(' · ');
   const counts = (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
   const locationNote = s.location_precision === 'postal' ? `Approximate location · PIN ${esc(s.pincode)}`
     : s.location_precision === 'unmapped' ? 'Project location unavailable'
-    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap name match' : 'Developer-reported map location'}</a>`
+    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap location' : 'Developer-reported map location'}</a>`
     : s.shape === 'osm' ? 'Buildings from OpenStreetMap' : s.shape === 'osm-site' ? 'Boundary from OpenStreetMap, towers drawn approximately' : 'Approximate shape: towers drawn from the listed tower count';
   const parts = s.score_parts || {};
   const score = s.score != null ? `<div class="score"><div class="big">${s.score}<small>/10</small></div><div class="parts">
@@ -502,9 +514,10 @@ function renderCard(s) {
   const ratingBars = d && Object.keys(d.ratings || {}).length ? `<div class="bars">${Object.entries(d.ratings).map(([k, v]) => `<div><span>${esc(k)}</span><i style="--w:${(v / 5) * 100}%"></i><b>${v}</b></div>`).join('')}</div>` : '';
   const reviews = d?.reviews?.length ? `<div class="reviews">${d.reviews.slice(0, 3).map((r) => `<blockquote>${esc(r.text)}<cite>${esc(r.by || 'Resident')}${r.date ? ' · ' + esc(r.date) : ''}</cite></blockquote>`).join('')}</div>` : '';
   const trend = d?.trend?.length > 1 ? sparkline(d.trend) : '';
-  const about = d?.description ? `<details><summary>About this project</summary><p class="fine">${esc(d.description)}</p></details>` : '';
+  const about = d?.description ? `<details><summary>About this project</summary><p class="fine">${esc(d.description)}${d.description_source ? ` · <a href="${esc(d.description_source)}" target="_blank" rel="noopener">Source</a>` : ''}</p></details>` : '';
   const inList = myList.includes(s.id);
-  const photos = d?.images?.length ? `<div class="photos">${d.images.map((im) => `<a href="${esc(im.full)}" target="_blank" rel="noopener"><img src="${esc(im.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.remove()"></a>`).join('')}</div><div class="fine">Photos: Magicbricks, opens full size</div>` : '';
+  const photos = projectPhotos(d?.images);
+  const quote = d?.developer_quote;
   $('card').innerHTML = `
     <div class="card-head">
       <div><span class="badge ${st}">${STATE_LABEL[st]}</span> ${s.verified ? '<span class="badge match">checked by hand</span>' : ''}${s.ai_read ? '<span class="badge likely">AI-read plans</span>' : ''}</div>
@@ -518,9 +531,9 @@ function renderCard(s) {
     ${s.listing_source === null ? '' : `<div class="meta">${s.rating ? `<span class="stars">★ ${s.rating.toFixed(1)}</span> ${s.rating_count || 0} resident ratings · ${s.review_count || 0} reviews · ` : ''}${counts}</div>`}
     ${s.note ? `<div class="fine">${esc(s.note)}</div>` : ''}
     <h4>Buy and rent</h4>
-    ${priceRows ? `<table class="prices"><tr><th>Home</th><th>Buy</th><th>Rent</th></tr>${priceRows}</table>` : data.dataset === 'maharera'
-      ? `<div class="links"><a href="${marketUrl('buy', crit.bhk)}" target="_blank" rel="noopener">Mumbai flats for sale ↗</a><a href="${marketUrl('rent', crit.bhk)}" target="_blank" rel="noopener">Mumbai rentals ↗</a></div>`
-      : '<div class="fine">No price data.</div>'}
+    ${priceRows ? `<table class="prices"><tr><th>Home</th><th>Buy</th><th>Rent</th></tr>${priceRows}</table>` : cityId !== 'mumbai' ? '<div class="fine">No price data.</div>' : ''}
+    ${quote ? `<div class="meta">Developer advertised starting prices · ${Object.entries(quote.buy).map(([bhk, amount]) => `${bhk} BHK ${formatINR(amount)}`).join(' · ')}</div><div class="fine">Development-wide quote checked ${esc(quote.as_of)} · <a href="${esc(quote.source)}" target="_blank" rel="noopener">Developer terms and availability</a></div>` : ''}
+    ${cityId === 'mumbai' ? `${marketSummary(s)}<div class="links"><a href="${marketUrl('buy', crit.bhk)}" target="_blank" rel="noopener">Mumbai flats for sale ↗</a><a href="${marketUrl('rent', crit.bhk)}" target="_blank" rel="noopener">Mumbai rentals ↗</a></div>` : ''}
     ${trend}
     <h4>Bedrooms</h4>
     ${unitRows ? `<table><tr><th>Unit</th><th>Bedrooms</th><th></th><th>Source</th></tr>${unitRows}</table>` : '<div class="fine">No unit types listed.</div>'}
@@ -550,12 +563,39 @@ function loadDetails() {
   return detailsPromise;
 }
 
-function sparkline(trend) {
+function projectPhotos(images) {
+  if (!images?.length) return '';
+  const gallery = images.map((im) => {
+    const src = im.file ? dataUrl(im.file) : im.thumb;
+    const img = `<a href="${esc(im.full)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="${esc(im.label || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="(this.closest('figure') || this.parentElement).remove()"></a>`;
+    if (!im.license) return img;
+    return `<figure class="project-photo">${img}<figcaption class="fine">${esc(im.label)}<br>${esc(im.author)} · <a href="${esc(im.license_url)}" target="_blank" rel="noopener">${esc(im.license)}</a></figcaption></figure>`;
+  });
+  return `<div class="photos">${gallery.join('')}</div>${cityId !== 'mumbai' ? '<div class="fine">Photos: Magicbricks, opens full size</div>' : ''}`;
+}
+
+function marketSummary(s) {
+  const a = market?.areas?.[s.market_key];
+  if (!a) return '';
+  const locality = `${s.location_precision === 'postal' ? 'PIN-area reference · ' : ''}${esc(s.market_key)}`;
+  const bits = [a.resale_psf && `Sale ${formatINR(a.resale_psf)}/sq ft carpet`, a.rent_2bhk && `2 BHK rent ${formatINR(a.rent_2bhk)}/mo`].filter(Boolean);
+  const trend = a.trend.filter(([year]) => year >= 2022);
+  return `<div class="market"><div class="meta">${locality} · locality asking rates</div>
+    ${bits.length ? `<div>${bits.join(' · ')}</div><div class="fine">Listing snapshot ${esc(a.as_of)}</div>` : ''}
+    ${trend.length > 1 ? sparkline(trend, 'Annual archive · median sale asking rate per sq ft') : ''}
+    <div class="fine"><a href="${esc(market.index)}" target="_blank" rel="noopener">Mumbai Property Exchange</a></div></div>`;
+}
+
+function sparkline(trend, label = 'Average price per sq ft') {
   const vals = trend.map((t) => t[1]), lo = Math.min(...vals), hi = Math.max(...vals), w = 200, h = 36;
-  const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h - 4 - ((v - lo) / (hi - lo || 1)) * (h - 8)}`).join(' ');
+  const years = trend.every(([year]) => typeof year === 'number');
+  const pts = vals.map((v, i) => {
+    const x = years ? (trend[i][0] - trend[0][0]) / (trend.at(-1)[0] - trend[0][0] || 1) : i / (vals.length - 1);
+    return `${x * w},${h - 4 - ((v - lo) / (hi - lo || 1)) * (h - 8)}`;
+  }).join(' ');
   const ch = ((vals.at(-1) - vals[0]) / vals[0]) * 100;
   return `<div class="trend"><svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-    <span class="fine">Average price per sq ft ${trend[0][0]} to ${trend.at(-1)[0]}: ₹${vals[0].toLocaleString()} to ₹${vals.at(-1).toLocaleString()} (${ch >= 0 ? '+' : ''}${ch.toFixed(0)}%)</span></div>`;
+    <span class="fine">${label} · ${trend[0][0]} to ${trend.at(-1)[0]} · ₹${vals[0].toLocaleString()} to ₹${vals.at(-1).toLocaleString()} (${ch >= 0 ? '+' : ''}${ch.toFixed(0)}%)</span></div>`;
 }
 
 // ---------- phone: one bottom sheet, two tabs (search | society) ----------
@@ -808,7 +848,7 @@ function tour() {
   if (touring) { stopTour(); return; }
   if (!map?.getSource('pts')) return;
   const projects = ranked().filter(projectPoint);
-  if (cityId === 'mumbai') projects.sort((a, b) => Number(projectBuilding(b)) - Number(projectBuilding(a)));
+  if (cityId === 'mumbai') projects.sort((a, b) => Number(projectBuilding(b)) - Number(projectBuilding(a)) || (b.photo_count || 0) - (a.photo_count || 0));
   const list = projects.slice(0, 10);
   if (!list.length) { toast('No matches with individual map locations.'); return; }
   touring = true;
