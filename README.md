@@ -1,5 +1,7 @@
 # Mumbai Flat Finder
 
+[Open the live site on GitHub Pages](https://contactaryanshukla14-lgtm.github.io/flat-finder/)
+
 This fork opens to Mumbai and keeps the original Flat Finder map, filters, research log and shortlist. Mumbai includes **5,803 residential and mixed-use MahaRERA registrations** across Mumbai City and Mumbai Suburban, from the 17 November 2026 snapshot. Separate wings may have their own registration.
 
 ```sh
@@ -8,17 +10,19 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Search using a project, developer, locality, postal PIN code or MahaRERA ID. Click a postal marker to filter to its PIN code. The Mumbai sample search shows projects with documented two-bedroom layouts and a gym. Gurugram remains available in the city selector.
+Open [http://localhost:5173](http://localhost:5173). Search using a project, developer, locality, postal PIN code or MahaRERA ID. Click a numbered circle to filter to that PIN code. **Load sample search** demonstrates the 2 BHK filter with at least 90 sq ft in every bedroom. Gurugram remains available in the city selector.
 
-Most Mumbai map locations are approximate and represent post offices for the filed PIN codes. Some registrations have no usable map location and remain searchable. The registry contains project registrations. Live rent and sale listings, asking prices, verified bedroom dimensions and proximity information are unavailable in the Mumbai snapshot. Filters remain in the original interface and return matches when the necessary data is available. A small set of project records includes developer-sourced layouts and amenities.
+Mumbai has 175 individual project locations with nearby-place distances. Most come from an exact normalized name match to one OpenStreetMap feature near the registered PIN code. Each result links to its source. Distances are straight-line measurements. The other map markers represent post offices for the filed PIN codes, and projects without a usable location remain searchable.
 
-Mumbai data comes from [AskRera’s MahaRERA registry export](https://askrera.com/data/maharera-registered-projects/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), filtered to both Mumbai districts and joined to the [India Post PIN Code Directory](https://data.gov.in/resource/all-india-pincode-directory-till-last-month) ([CSV mirror](https://github.com/dropdevrahul/pincodes-india/blob/main/pincode.csv), Government Open Data License – India). To refresh the data:
+Developer floor-plan measurements link to the exact PDF page for selected layouts. Filter results distinguish recorded matches from projects missing the evidence. The Mumbai registry has no live inventory, asking prices or rent feed.
+
+Mumbai data comes from [AskRera’s MahaRERA registry export](https://askrera.com/data/maharera-registered-projects/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), filtered to both Mumbai districts and joined to the [India Post PIN Code Directory](https://data.gov.in/resource/all-india-pincode-directory-till-last-month) ([CSV mirror](https://github.com/dropdevrahul/pincodes-india/blob/main/pincode.csv), Government Open Data License – India). Locations, footprints and proximity data derived from [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) are distributed under [ODbL](https://opendatacommons.org/licenses/odbl/1-0/). The published Mumbai JSON and GeoJSON contain this data, based on the [BBBike Bombay extract](https://download.bbbike.org/osm/bbbike/Bombay/). To refresh the data:
 
 ```sh
-python pipeline/mumbai_registry.py maharera-registered-projects.csv pincode.csv
+uv run --with osmium --with shapely python pipeline/mumbai_registry.py maharera-registered-projects.csv pincode.csv --osm Bombay.osm.pbf
 ```
 
-The CLI uses the bundled Mumbai snapshot by default. Try `node cli/flatfinder.mjs --bhk 2 --amenity gym`. The fork retains the Cloudflare Pages MCP endpoint at `/mcp`.
+The CLI uses the bundled Mumbai snapshot by default. Try `node cli/flatfinder.mjs --bhk 2 --min-bedroom 9x10`. The GitHub Pages deployment serves the browser app. The fork also retains the original Cloudflare Pages MCP function at `web/functions/mcp.js`.
 
 ## Original Flat Finder
 

@@ -36,6 +36,15 @@ describe('matchSociety', () => {
   it('a society with no unit data is "unknown" under a BHK filter', () => {
     expect(matchSociety(soc(), crit({ bhk: [3] }))).toBe('unknown');
   });
+  it('distinguishes missing registry evidence from a measured failure', () => {
+    const s = soc({ listing_source: null, location_precision: 'postal', unit_types: [unit([[9, 10]], true, 1)] });
+    expect(matchSociety(s, crit({ bhk: [1], roomArea: 85 }))).toBe('match');
+    expect(matchSociety(s, crit({ bhk: [1], roomArea: 85, maxRent: 50000, mode: 'rent' }))).toBe('unknown');
+    expect(matchSociety(s, crit({ bhk: [1], roomArea: 99, amenities: ['pool'] }))).toBe('no');
+    expect(matchSociety(s, crit({ near: ['metro'] }))).toBe('unknown');
+    expect(matchSociety({ ...s, nearby_source: 'osm', nearby: { rail: { m: 800 } } }, crit({ near: ['metro'] }))).toBe('match');
+    expect(matchSociety({ ...s, nearby_source: 'osm', nearby: { rail: { m: 1830 } } }, crit({ near: ['metro'] }))).toBe('no');
+  });
   it('verified amenity facts beat the portal list', () => {
     const s = soc({ amenities: ['Swimming Pool'], amen_facts: { squash: { value: 'yes' } } });
     expect(matchSociety(s, crit({ amenities: ['squash', 'pool'] }))).toBe('match');

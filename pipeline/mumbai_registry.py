@@ -10,6 +10,7 @@ from statistics import median
 from urllib.parse import quote
 
 from build_city import WEB, write_csv
+from verified import unit_from_verified
 
 
 DISTRICTS = ('Mumbai City', 'Mumbai Suburban')
@@ -17,6 +18,8 @@ RESIDENTIAL_TYPES = {'Residential / Group Housing', 'Mixed'}
 ARANYA = 'https://www.piramalrealty.com/projects/residential-projects/flats-in-byculla'
 REGISTRY = 'https://askrera.com/data/maharera-registered-projects/'
 EMINENCE = 'https://marathon.in/eminence/'
+MARQ = 'https://www.lodhagroup.com/projects/residential-property-in-mumbai/lodha-marq'
+PLAN_FILE = WEB.parents[2] / 'data' / 'verified' / 'mumbai.json'
 ARANYA_AMENITIES = ['Gym', 'Library', 'Viewing deck']
 DEVELOPER_DATA = {
     'P51900018039': dict(bhk=[2, 3, 4, 5], ready=True, source=ARANYA, locality='Byculla',
@@ -29,6 +32,9 @@ DEVELOPER_DATA = {
     'P51800016063': dict(bhk=[1, 2], sizes={1: 445, 2: 569}, source=EMINENCE, locality='Mulund West',
                         coords=[72.955961, 19.175282], location_source='https://bit.ly/2HfPhQr',
                         amenities=['Gym', 'Kids play area', 'Indoor games', 'Podium garden']),
+    'P51900046132': dict(bhk=[3, 4, 5], source=MARQ, locality='Tardeo',
+                        amenities=['Lap pool', 'Indoor games', 'Kids play area', 'Sports court'],
+                        note='The bedroom filter uses the main rectangles printed on the plan. Alcoves and staff rooms are excluded.'),
 }
 AREA_NAMES = {
     '400001': ('Fort', 'Ballard Estate', 'CST', 'CSMT'), '400005': ('Colaba', 'Cuffe Parade'),
@@ -98,7 +104,7 @@ STATUS = {'ongoing': 'Ongoing', 'ongoing_extended': 'Ongoing (extended)', 'compl
           'lapsed': 'Lapsed', 'abeyance': 'In abeyance', 'deregistered': 'Deregistered'}
 
 
-def society(row, area):
+def society(row, area, plans):
     identifier = row['rera_id'].strip().upper()
     name = row['project_name'].strip()
     extra = DEVELOPER_DATA.get(identifier, {})
@@ -107,10 +113,12 @@ def society(row, area):
     coords = extra.get('coords') or (area or {}).get('coords') or [None, None]
     precision = 'project' if extra.get('coords') else 'postal' if area else 'unmapped'
     registered_units = row['total_units'].strip()
-    layouts = [
+    verified_layouts = plans.get(identifier, [])
+    verified_bhk = {unit['bhk'] for unit in verified_layouts}
+    layouts = verified_layouts + [
         {'label': f'{bhk} BHK', 'bhk': bhk, 'size_sqft': extra.get('sizes', {}).get(bhk),
          'bedrooms': [], 'rooms_complete': False, 'confidence': 'developer', 'source': extra['source']}
-        for bhk in extra.get('bhk', [])
+        for bhk in extra.get('bhk', []) if bhk not in verified_bhk
     ]
     aliases = sorted({row['district'], row['taluka'].strip(), pin, *((area or {}).get('aliases') or [])} - {'', locality})
     if row['district'] == 'Mumbai City':
@@ -124,7 +132,8 @@ def society(row, area):
         'possession': row['proposed_completion'] or None,
         'units': int(registered_units) if registered_units.isdigit() else None, 'towers': None, 'acres': None,
         'price_min': None, 'price_max': None, 'kind': 'apartment', 'amenities': extra.get('amenities', []),
-        'unit_types': layouts, 'verified': False, 'amen_facts': {}, 'nearby': {}, 'prices': {},
+        'unit_types': layouts, 'verified': any(unit['rooms_complete'] for unit in verified_layouts), 'note': extra.get('note'),
+        'amen_facts': {}, 'nearby': {}, 'prices': {},
         'rating': None, 'rating_count': None, 'review_count': None,
         'sale_count': None, 'rent_count': None, 'psf_now': None, 'listing_source': None,
         'url': f'https://askrera.com/projects/view/?rera={quote(identifier)}',
@@ -133,8 +142,10 @@ def society(row, area):
     }
 
 
-def build(registry, pincodes, output=WEB):
+def build(registry, pincodes, output=WEB, osm=None):
     areas = post_offices(pincodes)
+    plan_data = json.loads(PLAN_FILE.read_text(encoding='utf-8')) if PLAN_FILE.exists() else {}
+    plans = {identifier: [unit_from_verified(unit) for unit in units] for identifier, units in plan_data.items()}
     projects = {}
     as_of = ''
     for row in records(registry):
@@ -145,23 +156,40 @@ def build(registry, pincodes, output=WEB):
         if not identifier or not name:
             continue
         as_of = max(as_of, row['as_of'])
-        projects[identifier] = society(row, areas.get(row['pincode'].strip()))
+        projects[identifier] = society(row, areas.get(row['pincode'].strip()), plans)
     if not projects or {p['district'] for p in projects.values()} != set(DISTRICTS):
         raise ValueError('The registry export must contain housing projects in both Mumbai districts.')
     projects = sorted(projects.values(), key=lambda p: (not p['unit_types'], p['name'].casefold(), p['id']))
     on_map = sum(p['lat'] is not None for p in projects)
     config = json.loads((WEB.parents[2] / 'data' / 'cities.json').read_text(encoding='utf-8'))['mumbai']
+    shapes = []
+    sources = [REGISTRY, 'https://data.gov.in/resource/all-india-pincode-directory-till-last-month']
+    if osm:
+        from mumbai_osm import OSM_SOURCE, enrich
+        shapes = enrich(projects, osm, config['bbox'])
+        sources.append(OSM_SOURCE)
+    events = [
+        {'sid': p['id'], 'step': 'MahaRERA registration', 'finding': f"{p['rera_id']} · {p['locality']}", 'url': p['url']}
+        for p in projects
+    ]
+    for p in projects:
+        if p['location_source']:
+            events.append({'sid': p['id'], 'step': 'Mapped project', 'finding': p['locality'], 'url': p['location_source']})
+        for unit in p['unit_types']:
+            if unit.get('confidence') == 'primary':
+                source = unit['source'] + f"#page={unit['page']}"
+                events.append({'sid': p['id'], 'step': f"Read floor plan p. {unit['page']}",
+                               'finding': f"{unit['label']} · {', '.join(unit['bedrooms_printed'])}",
+                               'url': source, 'verified': True, 'unit': unit['label']})
     data = {
         'city': {'id': 'mumbai', 'name': config['name'], 'center': config['center'], 'zoom': config['zoom']},
         'dataset': 'maharera', 'as_of': as_of,
-        'counts': {'listed': len(projects), 'on_map': on_map, 'not_located': len(projects) - on_map, 'verified': 0},
-        'sources': [REGISTRY, 'https://data.gov.in/resource/all-india-pincode-directory-till-last-month'],
+        'counts': {'listed': len(projects), 'on_map': on_map, 'not_located': len(projects) - on_map,
+                   'project_pins': sum(p['location_precision'] == 'project' for p in projects),
+                   'verified': sum(p['verified'] for p in projects)},
+        'sources': sources,
         'societies': projects,
-        'events': [
-            {'sid': p['id'], 'step': 'MahaRERA registration', 'finding': f"{p['rera_id']} · {p['locality']}",
-             'url': REGISTRY}
-            for p in projects
-        ],
+        'events': events,
     }
     output.mkdir(parents=True, exist_ok=True)
 
@@ -170,19 +198,21 @@ def build(registry, pincodes, output=WEB):
 
     write('mumbai.json', data)
     write('mumbai-details.json', {})
-    write('mumbai-shapes.geojson', {'type': 'FeatureCollection', 'features': []})
+    write('mumbai-shapes.geojson', {'type': 'FeatureCollection', 'features': shapes})
     write_csv(output / 'mumbai-societies.csv', output / 'mumbai-units.csv', projects, source_column='project_source_url')
     cities_file = output / 'cities.json'
     cities = json.loads(cities_file.read_text(encoding='utf-8')) if cities_file.exists() else {}
     cities['mumbai'] = {'name': config['name']}
     write('cities.json', cities)
-    print(f'{len(projects)} projects, {on_map} mapped, as of {as_of}')
+    print(f"{len(projects)} projects, {data['counts']['project_pins']} project pins, {len(shapes)} map shapes, "
+          f"{data['counts']['verified']} with verified plans, as of {as_of}")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('registry', type=Path)
     parser.add_argument('pincodes', type=Path)
+    parser.add_argument('--osm', type=Path, help='Optional Mumbai OpenStreetMap extract (.osm.pbf)')
     parser.add_argument('--output', type=Path, default=WEB)
     args = parser.parse_args()
-    build(args.registry, args.pincodes, args.output)
+    build(args.registry, args.pincodes, args.output, args.osm)

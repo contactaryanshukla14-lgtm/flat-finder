@@ -1,0 +1,133 @@
+{
+  "P51800016063": [
+    {
+      "label": "1 BHK · units 1 and 4",
+      "bhk": 1,
+      "carpet_sqft": 444.59,
+      "bedrooms": ["10'11\"x9'8\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/eminence/wp-content/uploads/sites/12/2019/12/marathon-eminence-mulund-brochure.pdf",
+      "page": 14
+    },
+    {
+      "label": "2 BHK · units 2 and 3",
+      "bhk": 2,
+      "carpet_sqft": 568.65,
+      "bedrooms": ["9'8\"x10'11\"", "10'5\"x9'11\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/eminence/wp-content/uploads/sites/12/2019/12/marathon-eminence-mulund-brochure.pdf",
+      "page": 15
+    }
+  ],
+  "P51800032741": [
+    {
+      "label": "1 BHK · unit 01",
+      "bhk": 1,
+      "carpet_sqft": 225,
+      "bedrooms": ["7'3\"x8'6\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/wp-content/uploads/2022/03/ekveera_floor-plans_a3_01.pdf",
+      "page": 4
+    },
+    {
+      "label": "1 BHK · unit 02",
+      "bhk": 1,
+      "carpet_sqft": 248,
+      "bedrooms": ["9'5\"x7'9\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/wp-content/uploads/2022/03/ekveera_floor-plans_a3_01.pdf",
+      "page": 5
+    },
+    {
+      "label": "1 BHK · unit 05",
+      "bhk": 1,
+      "carpet_sqft": 327,
+      "bedrooms": ["9'2\"x9'10\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/wp-content/uploads/2022/03/ekveera_floor-plans_a3_01.pdf",
+      "page": 8
+    }
+  ],
+  "P51800010386": [
+    {
+      "label": "1 BHK Smart · unit 2",
+      "bhk": 1,
+      "carpet_sqft": 270,
+      "bedrooms": ["8'11\"x10'2\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 5
+    },
+    {
+      "label": "1 BHK Smart · unit 3",
+      "bhk": 1,
+      "carpet_sqft": 256,
+      "bedrooms": ["7'10\"x9'5\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 5
+    }
+  ],
+  "P51800026955": [
+    {
+      "label": "1 BHK Smart · NeoValley brochure layout",
+      "bhk": 1,
+      "carpet_sqft": 237,
+      "bedrooms": ["8'0\"x8'0\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 24
+    }
+  ],
+  "P51800026970": [
+    {
+      "label": "1 BHK Smart · NeoValley brochure layout",
+      "bhk": 1,
+      "carpet_sqft": 237,
+      "bedrooms": ["8'0\"x8'0\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 24
+    }
+  ],
+  "P51800030751": [
+    {
+      "label": "1 BHK Smart · NeoPark brochure layout",
+      "bhk": 1,
+      "carpet_sqft": 242,
+      "bedrooms": ["9'7\"x8'0\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 37
+    }
+  ],
+  "P51800030752": [
+    {
+      "label": "1 BHK Smart · NeoPark brochure layout",
+      "bhk": 1,
+      "carpet_sqft": 242,
+      "bedrooms": ["9'7\"x8'0\""],
+      "confidence": "primary",
+      "source": "https://marathon.in/neohomes/wp-content/uploads/sites/18/2025/01/neohomes-plans.pdf",
+      "page": 37
+    }
+  ],
+  "P51900046132": [
+    {
+      "label": "3 BHK · unit 1",
+      "bhk": 3,
+      "bedrooms": ["12'0\"x20'6\"", "10'6\"x14'3\"", "12'0\"x14'3\""],
+      "confidence": "primary",
+      "source": "https://content.lodhagroup.in/chat/lodha-marq/brochure.pdf",
+      "page": 37
+    },
+    {
+      "label": "3 BHK · unit 2",
+      "bhk": 3,
+      "bedrooms": ["11'9\"x19'0\"", "10'6\"x15'3\"", "11'9\"x17'0\""],
+      "confidence": "primary",
+      "source": "https://content.lodhagroup.in/chat/lodha-marq/brochure.pdf",
+      "page": 37
+    }
+  ]
+}

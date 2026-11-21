@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { DEFAULT_CRITERIA, feetLabel, formatINR, matchSociety, priceFor } from '../web/src/filters.js';
 
 const SITE = 'https://flat-finder.pages.dev';
+const MUMBAI_SITE = 'https://contactaryanshukla14-lgtm.github.io/flat-finder';
 const DEFAULT_CITY = 'mumbai';
 const MUMBAI_DATA = new URL('../web/public/data/mumbai.json', import.meta.url);
 
@@ -84,7 +85,7 @@ export async function main(argv) {
   const o = parseArgs(argv);
   if (o.help) return console.log(HELP);
   const local = o.data || (o.city === DEFAULT_CITY ? MUMBAI_DATA : null);
-  const base = process.env.FLAT_FINDER_URL || (o.city === DEFAULT_CITY ? 'http://localhost:5173' : SITE);
+  const base = process.env.FLAT_FINDER_URL || (o.city === DEFAULT_CITY ? MUMBAI_SITE : SITE);
   const city = local ? JSON.parse(await readFile(local, 'utf8')) : await (await fetch(`${base}/data/${o.city}.json`)).json();
   const rows = search(city, o);
   if (o.json) return console.log(JSON.stringify(rows.slice(0, o.limit).map(({ s, v }) => ({ verdict: v, ...s })), null, 2));
@@ -94,7 +95,7 @@ export async function main(argv) {
     'smallest bedroom': smallestRoom(s), [o.crit.mode === 'rent' ? 'rent from' : 'price from']: money(priceFor(s, o.crit.mode, o.crit.bhk), o.crit.mode), link: `${base}/?city=${o.city}&open=${s.id}`,
   }));
   console.table(table);
-  if (city.dataset === 'maharera') console.log('Mumbai uses MahaRERA registrations. Live listings, prices and bedroom dimensions are unavailable.');
+  if (city.dataset === 'maharera') console.log('Mumbai uses MahaRERA registrations. Some units have sourced bedroom measurements. Live listings and prices are unavailable.');
   else {
     console.log('~ = our estimate from the rent-to-price ratio, not a listing.');
     console.log('* verified from brochures or HRERA plans. Unit rows without room sizes are "not checked yet" and never shown as matches.');

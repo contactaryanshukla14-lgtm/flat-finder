@@ -233,7 +233,7 @@ async function callTool(name, args, env, origin) {
   const data = await city(env, origin, id);
   const link = (s) => projectLink(origin, id, s.id);
   const registryNote = data.dataset === 'maharera'
-    ? 'Mumbai has MahaRERA registry data. Postal map locations are approximate. Live listings, prices and bedroom dimensions are unavailable.'
+    ? 'Mumbai uses MahaRERA registry data. Postal map locations are approximate. Bedroom plans and proximity are available for selected projects. Live listings and prices are unavailable.'
     : undefined;
   if (name === 'search_societies' || name === 'breakdown') {
     const crit = criteria(args);

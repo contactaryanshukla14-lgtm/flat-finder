@@ -76,6 +76,40 @@ export function addSocietyLayers(map, shapes, points) {
       'text-opacity': ['match', ['feature-state', 'st'], 'match', 1, 'likely', 0.85, 'probable', 0.85, 'unknown', 0.35, 'no', 0, 0.7] } });
 }
 
+export function addPostalLayers(map) {
+  map.addSource('postal', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({ id: 'postal-area', type: 'circle', source: 'postal', minzoom: 8,
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['get', 'count'], 1, 10, 60, 15, 350, 20],
+      'circle-color': ['case', ['get', 'unconfirmed'], '#292a31', '#372c20'],
+      'circle-stroke-color': ['case', ['get', 'unconfirmed'], '#7b7886', '#ffd9a0'],
+      'circle-stroke-width': 1.3,
+      'circle-opacity': 0.9,
+    } });
+  map.addLayer({ id: 'postal-total', type: 'symbol', source: 'postal', minzoom: 8,
+    layout: { 'text-field': ['to-string', ['get', 'count']], 'text-font': ['Noto Sans Bold'], 'text-size': 10,
+      'text-ignore-placement': true },
+    paint: { 'text-color': ['case', ['get', 'unconfirmed'], '#dfdce6', '#ffe6ba'] } });
+}
+
+export function setPostalCounts(map, groups, states) {
+  const features = [];
+  for (const [pin, group] of groups) {
+    let matches = 0, unknown = 0;
+    for (const id of group.ids) {
+      const state = states.get(id);
+      if (state === 'unknown') unknown++;
+      else if (state && state !== 'no') matches++;
+    }
+    if (!matches && !unknown) continue;
+    features.push({
+      type: 'Feature', properties: { pin, count: matches || unknown, unconfirmed: !matches },
+      geometry: { type: 'Point', coordinates: group.coordinates },
+    });
+  }
+  map.getSource('postal')?.setData({ type: 'FeatureCollection', features });
+}
+
 // Pulse the glow of matches. Cheap: one paint property on ~2,700 circles.
 export function startPulse(map) {
   setInterval(() => {
@@ -192,4 +226,8 @@ export function setHighlights(map, { glow = true, bounds = true, labels = true }
   map.setLayoutProperty('site-fill', 'visibility', bounds ? 'visible' : 'none');
   map.setLayoutProperty('site-line', 'visibility', bounds ? 'visible' : 'none');
   map.setLayoutProperty('labels', 'visibility', labels ? 'visible' : 'none');
+  if (map.getLayer('postal-area')) {
+    map.setLayoutProperty('postal-area', 'visibility', glow ? 'visible' : 'none');
+    map.setLayoutProperty('postal-total', 'visibility', glow && labels ? 'visible' : 'none');
+  }
 }

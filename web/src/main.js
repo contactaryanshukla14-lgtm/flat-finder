@@ -1,6 +1,6 @@
 import './style.css';
 import { LngLatBounds } from 'maplibre-gl';
-import { addBaseLayers, addSocietyLayers, BASE_MODES, createMap, OVERVIEW, setBaseMode, setHighlights, setSelected, setStates, startPulse } from './map.js';
+import { addBaseLayers, addPostalLayers, addSocietyLayers, BASE_MODES, createMap, OVERVIEW, setBaseMode, setHighlights, setPostalCounts, setSelected, setStates, startPulse } from './map.js';
 import { searchSocieties } from './search.js';
 import { createFeed } from './feed.js';
 import { AMENITY_KEYS, DEFAULT_CRITERIA, NEAR, RANK, feetLabel, formatINR, matchSociety, matchUnit, priceFor, roomPasses } from './filters.js';
@@ -10,6 +10,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const mobile = matchMedia('(max-width: 700px)').matches;
 const REPO = 'https://github.com/contactaryanshukla14-lgtm/flat-finder';
 const params = new URLSearchParams(location.search);
+const pageUrl = new URL(import.meta.env.BASE_URL, location.href);
+const dataUrl = (filename) => new URL(`data/${filename}`, pageUrl);
+const shareUrl = (query) => `${pageUrl.href}?${new URLSearchParams(query)}`;
 const store = { // localStorage can be missing or blocked: never let it break the page
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
@@ -24,9 +27,10 @@ const KINDS = [
 const AMEN_LABELS = { squash: 'Squash', pool: 'Pool', gym: 'Gym', club: 'Clubhouse', tennis: 'Tennis', badminton: 'Badminton', jogging: 'Jogging track', kids: 'Kids play' };
 const DIVY = { // Divy's own Gurugram search, shown as the example
   ...structuredClone(DEFAULT_CRITERIA), kinds: ['apartment'], bhk: [2, 3, 4], roomArea: 138, minSqft: 1620, amenities: ['squash'] }; // 11'3" x 12'3" = 138 sq ft
-const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), bhk: [2], amenities: ['gym'] };
+const MUMBAI_SAMPLE = { ...structuredClone(DEFAULT_CRITERIA), bhk: [2], roomArea: 90 };
 const DEFAULT_CITY = 'mumbai';
 const located = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng);
+const projectPoint = (s) => located(s) && s.location_precision !== 'postal';
 const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', probable: 'Probably fits (estimated)', unknown: 'Not checked yet', no: 'Does not match' };
 
 let crit = structuredClone(DEFAULT_CRITERIA);
@@ -35,14 +39,15 @@ let roomMode = 'off', areaUnit = 'gaj', sortBy = 'best';
 let data, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
 const preset = () => cityId === 'mumbai' ? MUMBAI_SAMPLE : DIVY;
 let myList = [], allAmenities = [];
+const postalGroups = new Map();
 const highlights = { glow: true, bounds: true, labels: true, ...store.get('ff-highlights', {}) };
 
 async function boot() {
-  const cities = await fetch('/data/cities.json').then((r) => r.json()).catch(() => ({ mumbai: { name: 'Mumbai' } }));
+  const cities = await fetch(dataUrl('cities.json')).then((r) => r.json()).catch(() => ({ mumbai: { name: 'Mumbai' } }));
   cityId = Object.hasOwn(cities, params.get('city')) ? params.get('city') : DEFAULT_CITY;
   const [city, shapes] = await Promise.all([
-    fetch(`/data/${cityId}.json`).then((r) => r.json()),
-    fetch(`/data/${cityId}-shapes.geojson`).then((r) => r.json()),
+    fetch(dataUrl(`${cityId}.json`)).then((r) => r.json()),
+    fetch(dataUrl(`${cityId}-shapes.geojson`)).then((r) => r.json()),
   ]);
   data = city;
   document.title = cityId === 'mumbai' ? 'Mumbai Flat Finder' : 'Flat Finder';
@@ -60,15 +65,16 @@ async function boot() {
   myList = params.get('list') ? params.get('list').split(',').filter((id) => byId.has(id)) : store.get(`ff-list-${cityId}`, []).filter((id) => byId.has(id));
   const c = city.counts, m = city.price_model || {}, rated = city.societies.filter((s) => s.rating).length;
   if (city.dataset === 'maharera') {
-    $('note').textContent = `${c.listed.toLocaleString()} registered projects across Mumbai City and Mumbai Suburban · ${c.on_map.toLocaleString()} on the map`;
-    $('about-prices').innerHTML = `Housing and mixed-use registrations from the <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera MahaRERA export</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Most pins use approximate locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Live listings, prices and bedroom dimensions are unavailable. BHK, home size and amenities appear where sourced.`;
+    $('note').textContent = `${c.listed.toLocaleString()} Mumbai projects · ${(c.project_pins || 0).toLocaleString()} mapped individually · Circles group PIN codes`;
+    $('about-prices').innerHTML = `Registered projects from <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Circles are approximate postal locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Named locations, footprints and nearby places include data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors (ODbL)</a>. Mumbai has no live sale or rent feed.`;
+    $('budget-coverage').hidden = false;
     $('dl-all').querySelector('small').textContent = 'All registered projects, postal areas and sources';
   } else {
     $('note').textContent = `${c.on_map.toLocaleString()} societies · ${(c.for_sale || 0).toLocaleString()} homes for sale, ${(c.for_rent || 0).toLocaleString()} for rent on Magicbricks · ${c.verified} verified from brochures and HRERA plans`;
     $('about-prices').innerHTML = `Prices and rents are medians of live Magicbricks listings. <b>⚠</b> marks a listing price our checks think is a typo (far from the same home nearby, or rent and price that cannot both be right): it is shown as listed but not used for filters. <b>~</b> marks our estimate: rent is about ${((m.city_yield || 0.025) * 100).toFixed(1)}% of the price per year here (measured on ${m.pairs || 0} society and BHK pairs, correlation ${m.log_price_rent_correlation ?? 'n/a'}). "Probably fits" uses a cautious bedroom size estimated from unit size (${city.room_model?.n || 0} verified unit types). Resident ratings exist for ${rated.toLocaleString()} societies.`;
   }
-  $('dl-all').href = `/data/${cityId}-societies.csv`;
-  $('dl-units').href = `/data/${cityId}-units.csv`;
+  $('dl-all').href = dataUrl(`${cityId}-societies.csv`);
+  $('dl-units').href = dataUrl(`${cityId}-units.csv`);
   $('dl-results').onclick = exportResults;
 
   feed = createFeed($('feed'), $('log-mode'), { events: city.events, byId });
@@ -88,12 +94,18 @@ async function boot() {
     feed.ambient();
     return;
   }
-  const points = { type: 'FeatureCollection', features: city.societies.filter(located).map((s) => ({
-    type: 'Feature', properties: { sid: s.id, name: s.location_precision === 'postal' ? s.pincode : s.name, show: 1 },
+  for (const s of city.societies) {
+    if (s.location_precision !== 'postal' || !located(s)) continue;
+    if (!postalGroups.has(s.pincode)) postalGroups.set(s.pincode, { coordinates: [s.lng, s.lat], ids: [] });
+    postalGroups.get(s.pincode).ids.push(s.id);
+  }
+  const points = { type: 'FeatureCollection', features: city.societies.filter(projectPoint).map((s) => ({
+    type: 'Feature', properties: { sid: s.id, name: s.name, show: 1 },
     geometry: { type: 'Point', coordinates: [s.lng, s.lat] } })) };
   map.once('style.load', () => {
     addSocietyLayers(map, shapes, points);
     addBaseLayers(map);
+    if (postalGroups.size) addPostalLayers(map);
     setBaseMode(map, baseMode);
     setHighlights(map, highlights);
     startPulse(map);
@@ -104,11 +116,22 @@ async function boot() {
         stopTour();
         const s = byId.get(e.features.find((f) => states.get(f.properties.sid) !== 'no')?.properties.sid);
         if (!s) return;
-        if (s.location_precision === 'postal') { $('q').value = s.pincode; setQuery(s.pincode); }
-        else openSociety(s.id);
+        openSociety(s.id);
       });
       map.on('mouseenter', l, () => (map.getCanvas().style.cursor = 'pointer'));
       map.on('mouseleave', l, () => (map.getCanvas().style.cursor = ''));
+    }
+    if (postalGroups.size) {
+      map.on('click', 'postal-area', (e) => {
+        stopTour();
+        const pin = e.features?.[0]?.properties.pin;
+        if (!pin) return;
+        $('q').value = pin;
+        setQuery(pin);
+        $('count').scrollIntoView({ block: 'nearest' });
+      });
+      map.on('mouseenter', 'postal-area', () => (map.getCanvas().style.cursor = 'pointer'));
+      map.on('mouseleave', 'postal-area', () => (map.getCanvas().style.cursor = ''));
     }
     intro();
   });
@@ -129,7 +152,8 @@ function intro() {
     feed.ambient();
     return;
   }
-  setStates(map, data.societies.map((s) => [s.id, 'no']));
+  setStates(map, data.societies.filter(projectPoint).map((s) => [s.id, 'no']));
+  if (postalGroups.size) setPostalCounts(map, postalGroups, new Map());
   map.jumpTo({ center: [78.5, 22.5], zoom: 2.2, pitch: 0, bearing: 0 });
   setTimeout(() => {
     map.flyTo({ ...OVERVIEW, duration: 4250, curve: 1.6, essential: true });
@@ -276,7 +300,7 @@ function toggleLog(show = document.body.classList.contains('nolog')) {
 let waveTimer = null;
 function applyFilters(wave = false) {
   const next = new Map(data.societies.map((s) => [s.id, matchSociety(s, crit)]));
-  const changed = [...next].filter(([id, st]) => states.get(id) !== st);
+  const changed = [...next].filter(([id, st]) => projectPoint(byId.get(id)) && (wave || states.get(id) !== st));
   states = next;
   clearInterval(waveTimer);
   if (wave && map) {
@@ -286,6 +310,7 @@ function applyFilters(wave = false) {
     const per = Math.ceil(changed.length / 30);
     waveTimer = setInterval(() => { setStates(map, changed.slice(i, i + per)); i += per; if (i >= changed.length) clearInterval(waveTimer); }, 50);
   } else if (map?.getSource?.('shapes')) setStates(map, changed);
+  if (map?.getSource?.('postal')) setPostalCounts(map, postalGroups, states);
   renderResults();
   if (selected) renderCard(byId.get(selected));
 }
@@ -315,7 +340,7 @@ function renderResults() {
   const rooms = crit.room || crit.roomArea;
   const bits = [];
   if (rooms) bits.push(`${counts.match} verified`, `${counts.likely} likely`, `${counts.probable} probably fit`);
-  if (counts.unknown) bits.push(`${counts.unknown.toLocaleString()} not checked yet`);
+  if (counts.unknown) bits.push(`${counts.unknown.toLocaleString()} ${data.dataset === 'maharera' ? 'missing data for these filters' : 'not checked yet'}`);
   $('count-sub').textContent = bits.join(' · ');
   $('v-list').textContent = myList.length ? `${myList.length} saved` : 'empty';
   const groups = rooms
@@ -334,6 +359,12 @@ function renderResults() {
     if (list.length > shown[st]) out.push(chip(`Show more (${list.length - shown[st]} left)`, false, () => { shown[st] += 50; renderResults(); }, 'linkbtn'));
     return out;
   }));
+  if (!all.length && data.dataset === 'maharera') {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = counts.unknown ? 'No confirmed matches. Widen your filters to browse more projects.' : 'No projects match these filters.';
+    $('results').append(empty);
+  }
 }
 
 function resultItem(s) {
@@ -397,7 +428,8 @@ function renderCard(s) {
         + (u.confidence === 'ocr' ? ` <span class="fine">(read from the plan by ${esc(u.checked_by || 'OCR')})</span>` : '')
       : u.est_short ? `<span class="fine">plans not read · estimated at least ${feetLabel(u.est_short)} wide, ~${u.est_area} sq ft</span>` : '<span class="fine">room sizes not read yet</span>';
     const srcLabel = u.confidence === 'developer' ? 'developer' : u.confidence === 'ai' || u.confidence === 'ocr' ? 'plan image' : u.confidence === 'primary' ? `plan${u.page ? ' p.' + esc(u.page) : ''}` : `portal${u.page ? ' p.' + esc(u.page) : ''}`;
-    const src = u.source ? `<a href="${esc(u.source)}" target="_blank" rel="noopener">${srcLabel}</a>` : '';
+    const source = u.confidence === 'primary' && /^\d+$/.test(u.page) && !u.source?.includes('#') ? `${u.source}#page=${u.page}` : u.source;
+    const src = u.source ? `<a href="${esc(source)}" target="_blank" rel="noopener">${srcLabel}</a>` : '';
     const size = u.super_sqft ? `${u.super_sqft.toLocaleString()} super` : u.carpet_sqft ? `${u.carpet_sqft.toLocaleString()} carpet` : u.size_sqft ? `${u.size_sqft.toLocaleString()}` : '';
     const vl = { unknown: 'unread', probable: 'probably' }[v] || v;
     return `<tr><td>${esc(u.label)}<div class="fine">${size ? size + ' sq ft' : ''}</div></td><td>${roomText}</td><td>${v ? `<span class="badge ${v}">${vl}</span>` : ''}</td><td>${src}</td></tr>`;
@@ -417,7 +449,7 @@ function renderCard(s) {
   const counts = s.listing_source === null ? 'Live listing data unavailable' : (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
   const locationNote = s.location_precision === 'postal' ? `Approximate location · PIN ${esc(s.pincode)}`
     : s.location_precision === 'unmapped' ? 'Project location unavailable'
-    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">Developer-reported map location</a>`
+    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap name match' : 'Developer-reported map location'}</a>`
     : s.shape === 'osm' ? 'Buildings from OpenStreetMap' : s.shape === 'osm-site' ? 'Boundary from OpenStreetMap, towers drawn approximately' : 'Approximate shape: towers drawn from the listed tower count';
   const parts = s.score_parts || {};
   const score = s.score != null ? `<div class="score"><div class="big">${s.score}<small>/10</small></div><div class="parts">
@@ -425,7 +457,7 @@ function renderCard(s) {
       <span class="fine">Flat Finder score: residents' rating 50%, what is nearby 30%, amenities 20%</span></div></div>` : '';
   const near = s.nearby || {};
   const nearRows = [['park', 'Park'], ['metro', 'Metro'], ['rail', 'Rail station'], ['school', 'School'], ['hospital', 'Hospital'], ['shopping', 'Mall or supermarket']]
-    .filter(([k]) => near[k]).map(([k, l]) => `<div><span>${l}</span><b>${metres(near[k].m)}</b><small>${esc(near[k].name || '')}${near[k].n > 1 ? ` · ${near[k].n} within 1 km` : ''}</small></div>`).join('');
+    .filter(([k]) => near[k]).map(([k, l]) => `<div><span>${l}</span><b>${metres(near[k].m)}</b><small>${near[k].source ? `<a href="${esc(near[k].source)}" target="_blank" rel="noopener">${esc(near[k].name || 'OpenStreetMap')}</a>` : esc(near[k].name || '')}${near[k].n > 1 ? ` · ${near[k].n} within 1 km` : ''}</small></div>`).join('');
   const ratingBars = d && Object.keys(d.ratings || {}).length ? `<div class="bars">${Object.entries(d.ratings).map(([k, v]) => `<div><span>${esc(k)}</span><i style="--w:${(v / 5) * 100}%"></i><b>${v}</b></div>`).join('')}</div>` : '';
   const reviews = d?.reviews?.length ? `<div class="reviews">${d.reviews.slice(0, 3).map((r) => `<blockquote>${esc(r.text)}<cite>${esc(r.by || 'Resident')}${r.date ? ' · ' + esc(r.date) : ''}</cite></blockquote>`).join('')}</div>` : '';
   const trend = d?.trend?.length > 1 ? sparkline(d.trend) : '';
@@ -449,7 +481,7 @@ function renderCard(s) {
     ${trend}
     <h4>Bedrooms</h4>
     ${unitRows ? `<table><tr><th>Unit</th><th>Bedrooms</th><th></th><th>Source</th></tr>${unitRows}</table>` : '<div class="fine">No unit types listed.</div>'}
-    ${nearRows ? `<h4>Nearby</h4><div class="near">${nearRows}</div>` : ''}
+    ${nearRows ? `<h4>Nearby</h4>${s.nearby_source ? '<div class="fine">Straight-line distances</div>' : ''}<div class="near">${nearRows}</div>` : ''}
     ${ratingBars ? `<h4>What residents rate</h4>${ratingBars}` : ''}${reviews}
     ${facts || amen ? `<h4>Amenities (${s.amenities.length})</h4><div class="amen">${facts}${amen}</div>` : ''}
     ${about}
@@ -471,7 +503,7 @@ function renderCard(s) {
 
 let detailsPromise = null;
 function loadDetails() {
-  detailsPromise ||= fetch(`/data/${cityId}-details.json`).then((r) => r.json()).then((d) => (details = d)).catch(() => (details = {}));
+  detailsPromise ||= fetch(dataUrl(`${cityId}-details.json`)).then((r) => r.json()).then((d) => (details = d)).catch(() => (details = {}));
   return detailsPromise;
 }
 
@@ -548,7 +580,7 @@ function buildList() {
   };
   $('btn-share').onclick = async () => {
     if (!myList.length) { toast('Your list is empty.'); return; }
-    const url = `${location.origin}/?city=${cityId}&list=${myList.join(',')}`;
+    const url = shareUrl({ city: cityId, list: myList.join(',') });
     try { await navigator.clipboard.writeText(url); toast('Link to your list copied.'); } catch { prompt('Copy this link', url); }
   };
   if (params.get('list') && myList.length) crit.only = [...myList];
@@ -568,7 +600,7 @@ function exportResults() {
   const rows = ranked().map((s) => {
     const p = priceFor(s, crit.mode, crit.bhk);
     return [s.name, s.locality, states.get(s.id), s.kind, p?.value, p ? p.estimated : '', s.sale_count, s.rent_count, s.score, s.rating, s.towers, s.units,
-      s.nearby?.park?.m, s.nearby?.metro?.m, s.url, s.gmaps, `${location.origin}/?city=${cityId}&open=${s.id}`];
+      s.nearby?.park?.m, s.nearby?.metro?.m, s.url, s.gmaps, shareUrl({ city: cityId, open: s.id })];
   });
   const blob = new Blob([[cols, ...rows].map((r) => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `flat-finder-${cityId}-${crit.mode}-results.csv` });
@@ -629,7 +661,7 @@ function buildOnboarding() {
     registry
       ? ['Mumbai’s registered housing projects', `${c.listed.toLocaleString()} registrations across Mumbai City and Mumbai Suburban. Most map markers show the project’s postal area.`]
       : ['Every society in ' + data.city.name + ', on one map', `${c.on_map.toLocaleString()} housing societies, ${(c.for_sale || 0).toLocaleString()} homes for sale and ${(c.for_rent || 0).toLocaleString()} for rent. Each one has its prices, rents, resident ratings, what is nearby, and links to Google Maps.`],
-    ['Start with what you cannot live without', registry ? 'Search by locality, PIN code, developer, project name or MahaRERA ID. Try the sample to see projects with documented BHK and amenities.'
+    ['Start with what you cannot live without', registry ? 'Search by locality, PIN code, developer, project name or MahaRERA ID. Try the sample to see 2 BHK floor plans with at least 90 sq ft in every bedroom.'
       : 'Pick Buy or Rent and your budget. Then set the smallest bedroom you can live with, by both sides or by area in gaj or sq ft. Add amenities and what you want nearby, like a park within 500 m.'],
     ['How to read the map', '<span class="lg match"></span> Verified: every bedroom read from builder plans and passes.<br><span class="lg likely"></span> Likely: the rooms read so far pass.<br><span class="lg probable"></span> Probably fits: plans not read yet, estimated from unit size.<br><span class="lg unknown"></span> Not checked yet: no room data, so neither pass nor fail.'],
     ['Open a society, keep a list', registry ? 'Click a postal marker to see its projects. Open a project to see its MahaRERA record. Star projects you like or export your results as a CSV.'

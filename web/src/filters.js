@@ -124,29 +124,41 @@ export function matchSociety(s, c) {
     if (!norm(c.q).split(' ').every((w) => hay.includes(w))) return 'no';
   }
   if (c.kinds.length && !c.kinds.includes(s.kind)) return 'no';
-  for (const key of c.near || []) if (!isNear(s, key)) return 'no';
-  if (c.ready && !/ready/i.test(s.status || '')) return 'no';
+  let needsEvidence = false;
+  for (const key of c.near || []) {
+    if (isNear(s, key)) continue;
+    if (s.location_precision && !s.nearby_source) needsEvidence = true;
+    else return 'no';
+  }
+  if (c.ready && !/ready/i.test(s.status || '')) {
+    if (s.listing_source === null && (!s.status || s.status === 'Completed')) needsEvidence = true;
+    else return 'no';
+  }
   const budget = c.mode === 'rent' ? c.maxRent : c.maxPrice;
   const floor = c.mode === 'rent' ? c.minRent : c.minPrice;
   if (budget || floor) {
     const p = priceFor(s, c.mode, c.bhk);
     if (p && budget && p.value > budget) return 'no';
     if (p && floor && p.value < floor) return 'no';
-    if (!p && s.listing_source === null) return 'unknown';
+    if (!p && s.listing_source === null) needsEvidence = true;
   }
-  for (const key of c.amenities) if (!hasAmenity(s, key)) return 'no';
+  for (const key of c.amenities) {
+    if (hasAmenity(s, key)) continue;
+    if (s.listing_source === null && !s.amen_facts?.[key]) needsEvidence = true;
+    else return 'no';
+  }
 
   const unitFilters = c.bhk.length || c.minSqft > 0 || c.maxSqft || c.room || c.roomArea;
-  if (!unitFilters) return 'match';
+  if (!unitFilters) return needsEvidence ? 'unknown' : 'match';
   const units = s.unit_types.filter((u) => !c.bhk.length || c.bhk.includes(u.bhk));
   if (!units.length) return s.unit_types.length ? 'no' : 'unknown';
   let best = 'no';
   for (const u of units) {
-    const r = matchUnit(u, c);
+    const r = s.listing_source === null && c.maxSqft && !unitSize(u) && !u.size_range ? 'unknown' : matchUnit(u, c);
     if (RANK[r] > RANK[best]) best = r;
     if (best === 'match') break;
   }
-  return best;
+  return needsEvidence && best !== 'no' ? 'unknown' : best;
 }
 
 export function feetLabel(ft) {
