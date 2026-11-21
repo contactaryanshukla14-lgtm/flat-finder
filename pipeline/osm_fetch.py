@@ -4,6 +4,7 @@ usage: python osm_fetch.py <city>  -> out/<city>/osm_areas.geojson, out/<city>/o
 """
 import json
 import pathlib
+import re
 import sys
 import time
 import urllib.parse
@@ -128,9 +129,13 @@ POI_QUERY = """[out:json][timeout:280];(
 def poi_kind(t):
     if t.get("leisure") == "park":
         return "park"
-    if t.get("station") == "subway" or "metro" in (t.get("name") or "").lower() or t.get("subway") == "yes":
+    railway = t.get("railway")
+    rail_station = railway in ("station", "halt")
+    subway = t.get("station") == "subway" or (rail_station and (
+        t.get("subway") == "yes" or re.search(r"\bmetro\b", t.get("name") or "", re.I)))
+    if subway and railway not in ("construction", "proposed"):
         return "metro"
-    if t.get("railway") in ("station", "halt"):
+    if rail_station:
         return "rail"
     if t.get("amenity") in ("school", "hospital"):
         return t["amenity"]
