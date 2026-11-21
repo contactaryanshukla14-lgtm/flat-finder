@@ -1,0 +1,230 @@
+{
+  "Chembur": {
+    "full": "https://commons.wikimedia.org/wiki/File:Chembur_monorail_station.jpg",
+    "author": "Abhijitsathe",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "label": "Chembur monorail station",
+    "file": "mumbai-neighborhoods/chembur.jpg"
+  },
+  "Mulund West": {
+    "full": "https://commons.wikimedia.org/wiki/File:S.C_Road,_Mulund_West_-_panoramio.jpg",
+    "author": "Saurabh Shetty",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "S.C Road, Mulund West",
+    "file": "mumbai-neighborhoods/mulund-west.jpg"
+  },
+  "Mulund East": {
+    "full": "https://commons.wikimedia.org/wiki/File:Mulund_Railway_Station_-_panoramio_-_Saurabh_Shetty.jpg",
+    "author": "Saurabh Shetty",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "Mulund Railway Station",
+    "file": "mumbai-neighborhoods/mulund-east.jpg"
+  },
+  "Jogeshwari West": {
+    "file": "mumbai-neighborhoods/overview-jogeshwari.jpg",
+    "area": "Jogeshwari",
+    "full": "https://commons.wikimedia.org/wiki/File:Jogeshwari_Caves_entrance.jpg",
+    "author": "Himanshu Sarpotdar",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Jogeshwari Caves"
+  },
+  "Sion": {
+    "full": "https://commons.wikimedia.org/wiki/File:@_Sion_Fort_-_panoramio_(23).jpg",
+    "author": "Udaykumar PR",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "@ Sion Fort",
+    "file": "mumbai-neighborhoods/sion.jpg"
+  },
+  "Mahim": {
+    "full": "https://commons.wikimedia.org/wiki/File:Mahim_Beach,_India.jpg",
+    "author": "Ting Chen",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "label": "Mahim Beach, India",
+    "file": "mumbai-neighborhoods/mahim.jpg"
+  },
+  "Jogeshwari East": {
+    "file": "mumbai-neighborhoods/overview-jogeshwari.jpg",
+    "area": "Jogeshwari",
+    "full": "https://commons.wikimedia.org/wiki/File:Jogeshwari_Caves_entrance.jpg",
+    "author": "Himanshu Sarpotdar",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Jogeshwari Caves"
+  },
+  "Andheri East": {
+    "full": "https://commons.wikimedia.org/wiki/File:Andheri_Station_-_panoramio.jpg",
+    "author": "Bharat Bang",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "Andheri Station",
+    "file": "mumbai-neighborhoods/andheri-east.jpg"
+  },
+  "Bandra East": {
+    "file": "mumbai-neighborhoods/overview-bandra.jpg",
+    "area": "Bandra",
+    "full": "https://commons.wikimedia.org/wiki/File:Bandra_Worli_Sea_Link_at_night.jpg",
+    "author": "Navin Thakur",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Bandra–Worli Sea Link"
+  },
+  "Bandra West": {
+    "file": "mumbai-neighborhoods/overview-bandra.jpg",
+    "area": "Bandra",
+    "full": "https://commons.wikimedia.org/wiki/File:Bandra_Worli_Sea_Link_at_night.jpg",
+    "author": "Navin Thakur",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Bandra–Worli Sea Link"
+  },
+  "Dadar East": {
+    "file": "mumbai-neighborhoods/overview-dadar.jpg",
+    "area": "Dadar",
+    "full": "https://commons.wikimedia.org/wiki/File:Kabooter_Khana_Dadar.jpg",
+    "author": "Swaminathan",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Kabootar Khana, Dadar"
+  },
+  "Dadar West": {
+    "file": "mumbai-neighborhoods/overview-dadar.jpg",
+    "area": "Dadar",
+    "full": "https://commons.wikimedia.org/wiki/File:Kabooter_Khana_Dadar.jpg",
+    "author": "Swaminathan",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "label": "Kabootar Khana, Dadar"
+  },
+  "Dahisar": {
+    "file": "mumbai-neighborhoods/overview-dahisar.jpg",
+    "area": "Dahisar",
+    "full": "https://commons.wikimedia.org/wiki/File:Dahisar_railway_station_-_Overview.jpg",
+    "author": "Superfast1111",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "Dahisar railway station"
+  },
+  "Dahisar West": {
+    "file": "mumbai-neighborhoods/overview-dahisar.jpg",
+    "area": "Dahisar",
+    "full": "https://commons.wikimedia.org/wiki/File:Dahisar_railway_station_-_Overview.jpg",
+    "author": "Superfast1111",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "Dahisar railway station"
+  },
+  "Ghatkopar East": {
+    "file": "mumbai-neighborhoods/overview-ghatkopar.jpg",
+    "area": "Ghatkopar",
+    "full": "https://commons.wikimedia.org/wiki/File:R_City_Mall_Ghatkopar.jpg",
+    "author": "Pradeep Mohandas",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "R City Mall, Ghatkopar"
+  },
+  "Ghatkopar West": {
+    "file": "mumbai-neighborhoods/overview-ghatkopar.jpg",
+    "area": "Ghatkopar",
+    "full": "https://commons.wikimedia.org/wiki/File:R_City_Mall_Ghatkopar.jpg",
+    "author": "Pradeep Mohandas",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "R City Mall, Ghatkopar"
+  },
+  "Juhu": {
+    "file": "mumbai-neighborhoods/overview-juhu.jpg",
+    "area": "Juhu",
+    "full": "https://commons.wikimedia.org/wiki/File:Juhu_beach_(Arial).jpg",
+    "author": "Ranga27 (talk)",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "Juhu Beach"
+  },
+  "Kandivali East": {
+    "file": "mumbai-neighborhoods/overview-kandivali.jpg",
+    "area": "Kandivali",
+    "full": "https://commons.wikimedia.org/wiki/File:ThakurVillage4.jpeg",
+    "author": "Nitin",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "Thakur Village, Kandivali East"
+  },
+  "Kandivali West": {
+    "file": "mumbai-neighborhoods/overview-kandivali.jpg",
+    "area": "Kandivali",
+    "full": "https://commons.wikimedia.org/wiki/File:ThakurVillage4.jpeg",
+    "author": "Nitin",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "Thakur Village, Kandivali East"
+  },
+  "Khar West": {
+    "file": "mumbai-neighborhoods/overview-khar-west.jpg",
+    "area": "Khar West",
+    "full": "https://commons.wikimedia.org/wiki/File:Carter_Road,_Khar_End.jpg",
+    "author": "Scrollstroll",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "label": "Carter Road promenade"
+  },
+  "Kurla": {
+    "file": "mumbai-neighborhoods/overview-kurla.jpg",
+    "area": "Kurla",
+    "full": "https://commons.wikimedia.org/wiki/File:Kurla_christian_village.jpg",
+    "author": "Tiven Gonsalves",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "label": "Street in Kurla"
+  },
+  "Kurla West": {
+    "file": "mumbai-neighborhoods/overview-kurla.jpg",
+    "area": "Kurla",
+    "full": "https://commons.wikimedia.org/wiki/File:Kurla_christian_village.jpg",
+    "author": "Tiven Gonsalves",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "label": "Street in Kurla"
+  },
+  "Lower Parel": {
+    "file": "mumbai-neighborhoods/overview-lower-parel.jpg",
+    "area": "Lower Parel",
+    "full": "https://commons.wikimedia.org/wiki/File:Lower_Parel,_Mumbai,_Maharashtra,_India_-_panoramio.jpg",
+    "author": "Udaykumar PR",
+    "license": "CC BY 3.0",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "label": "Lower Parel streetscape"
+  },
+  "Powai": {
+    "file": "mumbai-neighborhoods/overview-powai.jpg",
+    "area": "Powai",
+    "full": "https://commons.wikimedia.org/wiki/File:Hiranandani_gardens_view_from_powai.JPG",
+    "author": "Pratheepps",
+    "license": "CC BY-SA 2.5",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.5",
+    "label": "Hiranandani Gardens viewed from Powai Lake"
+  },
+  "Versova": {
+    "file": "mumbai-neighborhoods/overview-versova.jpg",
+    "area": "Versova",
+    "full": "https://commons.wikimedia.org/wiki/File:Versova_beach.JPG",
+    "author": "Utcursch",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "label": "Versova Beach"
+  },
+  "Worli": {
+    "file": "mumbai-neighborhoods/overview-worli.jpg",
+    "area": "Worli",
+    "full": "https://commons.wikimedia.org/wiki/File:Bandra-Worli_Sealink_21.jpg",
+    "author": "Devansh15",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "label": "Bandra–Worli Sea Link"
+  }
+}

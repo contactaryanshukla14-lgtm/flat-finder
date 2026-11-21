@@ -290,6 +290,8 @@ body[data-base=light] .maplibregl-ctrl-scale, body[data-base=light] .maplibregl-
 .project-photo { flex: 0 0 142px; margin: 0; }
 .project-photo img { width: 142px; height: 132px; object-fit: cover; border-radius: 10px; }
 .project-photo figcaption { padding-top: 4px; }
+.locality-photo .project-photo { flex-basis: 100%; }
+.locality-photo .project-photo img { width: 100%; height: 130px; object-position: center; }
 .market { display: flex; flex-direction: column; gap: 5px; padding: 10px; background: var(--chip); border-radius: 10px; font-size: 12px; }
 .dual { margin-bottom: 18px; }
 .dual .bubble { bottom: auto; top: 22px; }

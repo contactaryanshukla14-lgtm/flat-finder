@@ -34,9 +34,12 @@ const DEFAULT_CITY = 'mumbai';
 const located = (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng);
 const projectPoint = (s) => located(s) && s.location_precision !== 'postal';
 const projectBuilding = (s) => typeof s.display_height_estimated === 'boolean';
-const marketUrl = (mode, bhk) => {
+const hasLocalityPhoto = (s) => !!neighborhoodPhotos?.[s.locality];
+const marketUrl = (mode, bhk, locality) => {
   const rooms = bhk.length === 1 && bhk[0] >= 1 && bhk[0] <= 4 ? `${bhk[0]}-bhk-` : '';
-  const path = mode === 'rent' ? 'flats-for-rent-in-mumbai-pppfr' : 'flats-in-mumbai-for-sale-pppfs';
+  const slug = locality?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const area = slug ? `${slug}-mumbai` : 'mumbai';
+  const path = mode === 'rent' ? `flats-for-rent-in-${area}-pppfr` : `flats-in-${area}-for-sale-pppfs`;
   return `https://www.magicbricks.com/${rooms}${path}`;
 };
 const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', probable: 'Probably fits (estimated)', unknown: 'Not checked yet', no: 'Does not match' };
@@ -44,7 +47,7 @@ const STATE_LABEL = { match: 'Matches your search', likely: 'Likely match', prob
 let crit = structuredClone(DEFAULT_CRITERIA);
 let baseMode = BASE_MODES.includes(params.get('map')) ? params.get('map') : 'streets';
 let roomMode = 'off', areaUnit = 'gaj', sortBy = 'best';
-let data, market, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
+let data, market, neighborhoodPhotos, byId, map, feed, selected = null, states = new Map(), tourTimer = null, cityId = DEFAULT_CITY, details = null;
 const preset = () => cityId === 'mumbai' ? MUMBAI_SAMPLE : DIVY;
 let myList = [], allAmenities = [];
 const postalGroups = new Map();
@@ -53,13 +56,15 @@ const highlights = { glow: true, bounds: true, labels: true, ...store.get('ff-hi
 async function boot() {
   const cities = await fetch(dataUrl('cities.json')).then((r) => r.json()).catch(() => ({ mumbai: { name: 'Mumbai' } }));
   cityId = Object.hasOwn(cities, params.get('city')) ? params.get('city') : DEFAULT_CITY;
-  const [city, shapes, localMarket] = await Promise.all([
+  const [city, shapes, localMarket, localityImages] = await Promise.all([
     fetch(dataUrl(`${cityId}.json`)).then((r) => r.json()),
     fetch(dataUrl(`${cityId}-shapes.geojson`)).then((r) => r.json()),
     cityId === 'mumbai' ? fetch(dataUrl('mumbai-market.json')).then((r) => r.json()).catch(() => null) : null,
+    cityId === 'mumbai' ? fetch(dataUrl('mumbai-neighborhood-photos.json')).then((r) => r.json()).catch(() => null) : null,
   ]);
   data = city;
   market = localMarket;
+  neighborhoodPhotos = localityImages;
   document.title = cityId === 'mumbai' ? 'Mumbai Flat Finder' : 'Flat Finder';
   document.body.dataset.city = cityId;
   if (cityId === 'mumbai') {
@@ -79,7 +84,7 @@ async function boot() {
   myList = params.get('list') ? params.get('list').split(',').filter((id) => byId.has(id)) : store.get(`ff-list-${cityId}`, []).filter((id) => byId.has(id));
   const c = city.counts, m = city.price_model || {}, rated = city.societies.filter((s) => s.rating).length;
   if (city.dataset === 'maharera') {
-    $('note').textContent = `${c.listed.toLocaleString()} registrations · ${c.project_buildings.toLocaleString()} 3D project buildings · Circles group PIN codes`;
+    $('note').textContent = `${c.project_pins.toLocaleString()} project locations · ${c.project_buildings.toLocaleString()} 3D footprints · Circles group PIN codes`;
     $('about-prices').innerHTML = `Registered projects from <a href="https://askrera.com/data/maharera-registered-projects/" target="_blank" rel="noopener">AskRera</a> (${esc(city.as_of)}, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>). Circles are approximate postal locations from the <a href="https://data.gov.in/resource/all-india-pincode-directory-till-last-month" target="_blank" rel="noopener">India Post directory</a>. Named locations, footprints and nearby places include data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors (ODbL)</a>. Building heights are estimated where they are missing in OpenStreetMap.`;
     $('budget-basis').hidden = false;
     $('market-listings').hidden = false;
@@ -371,7 +376,9 @@ const dist = (s, c) => located(s) ? (s.lng - c[0]) ** 2 + (s.lat - c[1]) ** 2 : 
 function sorted(list) {
   const price = (s) => priceFor(s, crit.mode, crit.bhk)?.value ?? Infinity;
   const by = {
-    best: (a, b) => RANK[states.get(b.id)] - RANK[states.get(a.id)] || b.verified - a.verified || (b.score || 0) - (a.score || 0),
+    best: (a, b) => RANK[states.get(b.id)] - RANK[states.get(a.id)] || b.verified - a.verified
+      || (cityId === 'mumbai' ? (b.photo_count || 0) - (a.photo_count || 0) || Number(projectPoint(b)) - Number(projectPoint(a)) : 0)
+      || (b.score || 0) - (a.score || 0),
     score: (a, b) => (b.score || 0) - (a.score || 0),
     rating: (a, b) => (b.rating || 0) - (a.rating || 0) || (b.rating_count || 0) - (a.rating_count || 0),
     price: (a, b) => price(a) - price(b),
@@ -502,7 +509,7 @@ function renderCard(s) {
   const counts = (s.sale_count || s.rent_count) ? `${(s.sale_count || 0).toLocaleString()} for sale · ${(s.rent_count || 0).toLocaleString()} for rent now` : 'No live listings';
   const locationNote = s.location_precision === 'postal' ? `Approximate location · PIN ${esc(s.pincode)}`
     : s.location_precision === 'unmapped' ? 'Project location unavailable'
-    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap location' : 'Developer-reported map location'}</a>`
+    : s.location_source ? `<a href="${esc(s.location_source)}" target="_blank" rel="noopener">${s.location_basis === 'filing' ? 'MahaRERA filed map pin' : s.location_source.startsWith('https://www.openstreetmap.org/') ? 'OpenStreetMap location' : 'Developer-reported map location'}</a>`
     : s.shape === 'osm' ? 'Buildings from OpenStreetMap' : s.shape === 'osm-site' ? 'Boundary from OpenStreetMap, towers drawn approximately' : 'Approximate shape: towers drawn from the listed tower count';
   const parts = s.score_parts || {};
   const score = s.score != null ? `<div class="score"><div class="big">${s.score}<small>/10</small></div><div class="parts">
@@ -516,7 +523,8 @@ function renderCard(s) {
   const trend = d?.trend?.length > 1 ? sparkline(d.trend) : '';
   const about = d?.description ? `<details><summary>About this project</summary><p class="fine">${esc(d.description)}${d.description_source ? ` · <a href="${esc(d.description_source)}" target="_blank" rel="noopener">Source</a>` : ''}</p></details>` : '';
   const inList = myList.includes(s.id);
-  const photos = projectPhotos(d?.images);
+  const localityPhoto = neighborhoodPhotos?.[s.locality];
+  const photos = d?.images?.length ? projectPhotos(d.images) : localityPhoto ? projectPhotos([localityPhoto], `Around ${localityPhoto.area || s.locality}`) : '';
   const quote = d?.developer_quote;
   $('card').innerHTML = `
     <div class="card-head">
@@ -533,13 +541,14 @@ function renderCard(s) {
     <h4>Buy and rent</h4>
     ${priceRows ? `<table class="prices"><tr><th>Home</th><th>Buy</th><th>Rent</th></tr>${priceRows}</table>` : cityId !== 'mumbai' ? '<div class="fine">No price data.</div>' : ''}
     ${quote ? `<div class="meta">Developer advertised starting prices · ${Object.entries(quote.buy).map(([bhk, amount]) => `${bhk} BHK ${formatINR(amount)}`).join(' · ')}</div><div class="fine">Development-wide quote checked ${esc(quote.as_of)} · <a href="${esc(quote.source)}" target="_blank" rel="noopener">Developer terms and availability</a></div>` : ''}
-    ${cityId === 'mumbai' ? `${marketSummary(s)}<div class="links"><a href="${marketUrl('buy', crit.bhk)}" target="_blank" rel="noopener">Mumbai flats for sale ↗</a><a href="${marketUrl('rent', crit.bhk)}" target="_blank" rel="noopener">Mumbai rentals ↗</a></div>` : ''}
+    ${cityId === 'mumbai' ? `${marketSummary(s)}<div class="links"><a href="${marketUrl('buy', crit.bhk, s.market_key)}" target="_blank" rel="noopener">Flats for sale in ${esc(s.market_key || 'Mumbai')} ↗</a><a href="${marketUrl('rent', crit.bhk, s.market_key)}" target="_blank" rel="noopener">Rentals in ${esc(s.market_key || 'Mumbai')} ↗</a></div>` : ''}
     ${trend}
     <h4>Bedrooms</h4>
     ${unitRows ? `<table><tr><th>Unit</th><th>Bedrooms</th><th></th><th>Source</th></tr>${unitRows}</table>` : '<div class="fine">No unit types listed.</div>'}
-    ${nearRows ? `<h4>Nearby</h4>${s.nearby_source ? '<div class="fine">Straight-line distances</div>' : ''}<div class="near">${nearRows}</div>` : ''}
+    ${nearRows ? `<h4>Nearby</h4>${s.nearby_source ? `<div class="fine">Straight-line distances from the ${s.location_basis === 'filing' ? 'filed pin' : 'project location'}</div>` : ''}<div class="near">${nearRows}</div>` : ''}
     ${ratingBars ? `<h4>What residents rate</h4>${ratingBars}` : ''}${reviews}
     ${facts || amen ? `<h4>Amenities (${s.amenities.length})</h4><div class="amen">${facts}${amen}</div>` : ''}
+    ${cityId === 'mumbai' ? filingFacts(s) : ''}
     ${about}
     <div class="links">
       <a class="btnlink" href="${esc(s.gmaps)}" target="_blank" rel="noopener">Google Maps and reviews</a>
@@ -563,15 +572,25 @@ function loadDetails() {
   return detailsPromise;
 }
 
-function projectPhotos(images) {
+function projectPhotos(images, localityLabel = '') {
   if (!images?.length) return '';
   const gallery = images.map((im) => {
     const src = im.file ? dataUrl(im.file) : im.thumb;
     const img = `<a href="${esc(im.full)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="${esc(im.label || '')}" loading="lazy" referrerpolicy="no-referrer" onerror="(this.closest('figure') || this.parentElement).remove()"></a>`;
     if (!im.license) return img;
-    return `<figure class="project-photo">${img}<figcaption class="fine">${esc(im.label)}<br>${esc(im.author)} · <a href="${esc(im.license_url)}" target="_blank" rel="noopener">${esc(im.license)}</a></figcaption></figure>`;
+    return `<figure class="project-photo">${img}<figcaption class="fine">${localityLabel ? `<b>${esc(localityLabel)}</b> · ` : ''}${esc(im.label)}<br>${esc(im.author)} · <a href="${esc(im.license_url)}" target="_blank" rel="noopener">${esc(im.license)}</a></figcaption></figure>`;
   });
-  return `<div class="photos">${gallery.join('')}</div>${cityId !== 'mumbai' ? '<div class="fine">Photos: Magicbricks, opens full size</div>' : ''}`;
+  return `<div class="photos${localityLabel ? ' locality-photo' : ''}">${gallery.join('')}</div>${cityId !== 'mumbai' ? '<div class="fine">Photos: Magicbricks, opens full size</div>' : ''}`;
+}
+
+function filingFacts(s) {
+  const dates = [ ['Registered', s.registration_date], ['Original completion', s.original_completion],
+    ['Latest proposed completion', s.possession], ['Filing last modified', s.filing_modified] ];
+  const rows = dates.filter(([, value]) => value).map(([label, value]) => `<tr><td>${label}</td><td>${esc(value)}</td></tr>`);
+  if (!rows.length) return '';
+  return `<h4>MahaRERA filing</h4><table>${rows.join('')}</table>
+    ${s.filing_url ? `<a href="${esc(s.filing_url)}" target="_blank" rel="noopener">Open the public filing search ↗</a>` : ''}
+    ${s.building_source ? `<a class="fine" href="${esc(s.building_source)}" target="_blank" rel="noopener">OpenStreetMap footprint at the filed pin</a>` : ''}`;
 }
 
 function marketSummary(s) {
@@ -848,7 +867,8 @@ function tour() {
   if (touring) { stopTour(); return; }
   if (!map?.getSource('pts')) return;
   const projects = ranked().filter(projectPoint);
-  if (cityId === 'mumbai') projects.sort((a, b) => Number(projectBuilding(b)) - Number(projectBuilding(a)) || (b.photo_count || 0) - (a.photo_count || 0));
+  if (cityId === 'mumbai') projects.sort((a, b) => Number(projectBuilding(b)) - Number(projectBuilding(a))
+    || (b.photo_count || 0) - (a.photo_count || 0) || Number(hasLocalityPhoto(b)) - Number(hasLocalityPhoto(a)));
   const list = projects.slice(0, 10);
   if (!list.length) { toast('No matches with individual map locations.'); return; }
   touring = true;
